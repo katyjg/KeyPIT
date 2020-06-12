@@ -39,6 +39,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'itemlist',
     'keypit.kpis',
     'django_cas_ng',
 ]

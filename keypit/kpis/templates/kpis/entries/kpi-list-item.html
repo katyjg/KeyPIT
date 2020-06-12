@@ -1,0 +1,19 @@
+{% load icons %}
+<div class="p-2 list-group-item list-group-item-default">
+    <div class="d-flex flex-row">
+        <div class="box-status text-center">
+            {% show_icon label='' icon='ti ti-md ti-clipboard' %}
+        </div>
+        <div class="pl-3 overflow-ellipsis text-muted align-self-center">
+            <h5 class="m-0">
+                <a class="text-muted text-condensed" href="{% url "kpi-list" %}"
+                   title='View KPI "{{ kpi.name }}"'> {{ kpi.name }}
+                </a>
+            </h5>
+            <div>
+                <strong>{{ kpi.beamlines_count }}</strong> Beamline{{ kpi.beamlines_count|pluralize }} /
+                <strong>{{ kpi.entries_count }}</strong> Entries{{ kpi.entries_count|pluralize }}
+            </div>
+        </div>
+    </div>
+</div>

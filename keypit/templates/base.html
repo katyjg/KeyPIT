@@ -6,7 +6,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <title>{% block page_title %}MxLIVE{% endblock %}</title>
+    <title>{% block page_title %}KeyPIT{% endblock %}</title>
     <link rel="icon" href="{% static 'img/icon.ico' %}">
 
     <!-- Styles -->
@@ -31,7 +31,7 @@
 {% block body %}
     <!-- User Profile Menu -->
     {% if user.is_authenticated %}
-        {% include "users/navs.html" %}
+        {% include "kpis/navs.html" %}
     {% endif %}
     <main role="main">
         <div id="spinner">
@@ -46,7 +46,7 @@
                 {% block object_status %}{% endblock %}
                 {% if maintenance %}
                 <div class="alert alert-warning">
-                  <strong>Warning!</strong> MxLIVE is currently undergoing maintenance activities. Some features may not be available
+                  <strong>Warning!</strong> KeyPIT is currently undergoing maintenance activities. Some features may not be available
                     and performance may be impacted. This message will be removed when full functionality is restored. Sorry for the
                     temporary inconvenience.
                 </div>

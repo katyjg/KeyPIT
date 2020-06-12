@@ -1,7 +1,11 @@
-from django.views.generic import edit, detail, View
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
+from django.db.models import Count
+from django.views.generic import edit, detail, View
+
+from itemlist.views import ItemListView
 
 from keypit.kpis import models
+from keypit.kpis.mixins import *
 
 
 class Dashboard(UserPassesTestMixin, detail.DetailView):
@@ -34,39 +38,43 @@ class Dashboard(UserPassesTestMixin, detail.DetailView):
     def get_context_data(self, **kwargs):
         context = super(Dashboard, self).get_context_data(**kwargs)
         if self.request.user.is_superuser:
-            departments = models.Department.objects.all()
-            context.update(departments=departments)
+            departments = models.Department.objects.annotate(beamline_count=Count('beamlines', distinct=True))
+            kpis = models.KPI.objects.annotate(entries_count=Count('entries', distinct=True), beamlines_count=Count('entries__beamline', distinct=True))
+            context.update(departments=departments, kpis=kpis)
 
         else:
-            manager = self.request.user
-            shipments = project.shipments.filter(
-                Q(status__lt=models.Shipment.STATES.RETURNED)
-                | Q(status=models.Shipment.STATES.RETURNED, date_returned__gt=one_year_ago)
-            ).annotate(
-                data_count=Count('containers__samples__datasets', distinct=True),
-                report_count=Count('containers__samples__datasets__reports', distinct=True),
-                sample_count=Count('containers__samples', distinct=True),
-                group_count=Count('groups', distinct=True),
-                container_count=Count('containers', distinct=True),
-            ).order_by('status', '-date_shipped', '-created').prefetch_related('project')
-
-            if settings.LIMS_USE_SCHEDULE:
-                from mxlive.schedule.models import AccessType
-                access_types = AccessType.objects.all()
-                beamtimes = project.beamtime.filter(start__gte=one_year_ago, cancelled=False).with_duration().annotate(
-                    upcoming=Case(When(start__gte=now, then=Value(True)), default=Value(False), output_field=BooleanField())
-                ).annotate(
-                    distance=Case(When(upcoming=True, then=F('start') - now), default=now - F('start'))
-                ).order_by('-upcoming', 'distance')
-                context.update(beamtimes=beamtimes, access_types=access_types)
-
-            sessions = project.sessions.filter(
-                created__gt=one_year_ago
-            ).annotate(
-                data_count=Count('datasets', distinct=True),
-                report_count=Count('datasets__reports', distinct=True),
-                last_record=Max('datasets__end_time'),
-            ).order_by('last_record').with_duration().prefetch_related('project', 'beamline')[:7]
-
-            context.update(shipments=shipments, sessions=sessions)
+            pass
         return context
+
+
+class DepartmentList(ListViewMixin, ItemListView):
+    model = models.Department
+    list_filters = []
+    list_columns = ['id', 'name']
+    list_search = ['name', 'acronym']
+    #link_url = 'department-detail'
+    link_data = False
+    #ordering = ['status', '-modified']
+    paginate_by = 25
+
+
+class BeamlineList(ListViewMixin, ItemListView):
+    model = models.Beamline
+    list_filters = ['department',]
+    list_columns = ['id', 'name']
+    list_search = ['name', 'acronym']
+    #link_url = 'department-detail'
+    link_data = False
+    #ordering = ['status', '-modified']
+    paginate_by = 25
+
+
+class KPIList(ListViewMixin, ItemListView):
+    model = models.KPI
+    list_filters = []
+    list_columns = ['id', 'name', 'description']
+    list_search = ['name', 'description']
+    #link_url = 'department-detail'
+    link_data = False
+    #ordering = ['status', '-modified']
+    paginate_by = 25
