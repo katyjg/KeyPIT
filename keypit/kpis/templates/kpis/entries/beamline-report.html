@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+
+{% load static %}
+{% load icons %}
+
+{% block page_heading %}
+    <h3 class="text-condensed">
+        <i class="text-muted fa fa-fw {% if object.is_editable %}fa-unlock{% else %}fa-lock{% endif %}"></i>
+        <span class="text-muted">{% if user.is_superuser %}{{ object.acronym|upper }} | {% endif %}</span><strong>{{ month }}</strong>
+    </h3>
+    <span class="text-muted">
+        <strong>1</strong> of <strong>{{ object.department.beamlines.count }}</strong> Beamline{{ object.department.beamlines.count|pluralize }} in {{ object.department }}
+    </span>
+{% endblock %}
+
+{% block full %}
+<div class="row">
+    <div class="col-12">
+    {% for cat, entries in categories.items %}
+        <div class="card mb-4">
+            <div class="card-header p-1 text-center text-wide text-muted"><small>{{ cat|upper }}</small></div>
+            <div class="list-group list-group-flush">
+                {% for entry in entries %}
+                    <div class="p-2 list-group-item list-group-item-action list-group-item-default">
+                        <div class="d-flex flex-row">
+                            <div class="pl-3 text-muted align-self-center">
+                                <h5 class="m-0 mt-2"><strong>
+                                    {{ entry.kpi.name }}
+                                </strong></h5>
+                                <div>
+                                    {{ entry.kpi.description }}
+                                </div>
+                            </div>
+                        </div>
+                        <hr class="mx-3" />
+                        <div class="d-flex flex-row">
+                            <div class="box-status text-center align-middle">
+                                <span class="text-large">{{ entry.value|default_if_none:"-" }}</span>
+                            </div>
+                            <div class="pl-3 align-self-center">
+                                <div class="m-0">
+                                    {% if entry.comments %}<strong>{{ entry.comments }}</strong>{% else %}<em>No additional comments</em>{% endif %}
+                                </div>
+                            </div>
+                            <div class="tools-box ml-auto">
+                                <a href="#!"  data-form-link="{% url "kpientry-edit" entry.pk %}" title="Edit this information">
+                                    {% show_icon label='Edit' icon='ti ti-md ti-pencil' color='info' %}
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        </div>
+    {% endfor %}
+    </div>
+</div>
+{% endblock %}

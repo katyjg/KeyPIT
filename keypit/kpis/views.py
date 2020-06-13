@@ -1,10 +1,14 @@
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
+from django.contrib.messages.views import SuccessMessageMixin
 from django.db.models import Count
 from django.views.generic import edit, detail, View
+from django.urls import reverse_lazy
+from django.http import HttpResponseRedirect
 
 from itemlist.views import ItemListView
+from datetime import datetime
 
-from keypit.kpis import models
+from keypit.kpis import models, forms, stats
 from keypit.kpis.mixins import *
 
 
@@ -52,10 +56,15 @@ class DepartmentList(ListViewMixin, ItemListView):
     list_filters = []
     list_columns = ['id', 'name']
     list_search = ['name', 'acronym']
-    #link_url = 'department-detail'
+    link_url = 'department-detail'
     link_data = False
     #ordering = ['status', '-modified']
     paginate_by = 25
+
+
+class DepartmentDetail(LoginRequiredMixin, detail.DetailView):
+    model = models.Department
+    template_name = "kpis/entries/department.html"
 
 
 class BeamlineList(ListViewMixin, ItemListView):
@@ -63,10 +72,39 @@ class BeamlineList(ListViewMixin, ItemListView):
     list_filters = ['department',]
     list_columns = ['id', 'name']
     list_search = ['name', 'acronym']
-    #link_url = 'department-detail'
+    link_url = 'beamline-detail'
     link_data = False
     #ordering = ['status', '-modified']
     paginate_by = 25
+
+
+class BeamlineDetail(LoginRequiredMixin, detail.DetailView):
+    model = models.Beamline
+    template_name = "kpis/entries/beamline.html"
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['report'] = stats.beamline_stats(self.object, period="month")
+        return context
+
+
+class BeamlineReport(LoginRequiredMixin, detail.DetailView):
+    model = models.Beamline
+    template_name = "kpis/entries/beamline-report.html"
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        year = self.kwargs.pop('year')
+        month = self.kwargs.pop('month')
+        entries = self.object.entries.filter(month__year=year, month__month=month)
+        categories = models.KPICategory.objects.filter(pk__in=entries.values_list('kpi__category__id', flat=True).distinct())
+        context['categories'] = {
+            cat: entries.filter(kpi__category=cat) for cat in categories
+        }
+        if entries.filter(kpi__category__isnull=True).exists():
+            context['categories']['Other'] = entries.filter(kpi__category__isnull=True)
+        context['month'] = datetime.strftime(entries.first().month, "%B %Y")
+        return context
 
 
 class KPIList(ListViewMixin, ItemListView):
@@ -78,3 +116,62 @@ class KPIList(ListViewMixin, ItemListView):
     link_data = False
     #ordering = ['status', '-modified']
     paginate_by = 25
+
+
+class KPICreate(AdminRequiredMixin, SuccessMessageMixin, AsyncFormMixin, edit.CreateView):
+    form_class = forms.KPIForm
+    template_name = "modal/form.html"
+    model = models.KPI
+    success_url = reverse_lazy('dashboard')
+    success_message = "KPI has been created"
+
+
+class KPIEdit(AdminRequiredMixin, SuccessMessageMixin, AsyncFormMixin, edit.UpdateView):
+    form_class = forms.KPIForm
+    template_name = "modal/form.html"
+    model = models.KPI
+    success_url = reverse_lazy('dashboard')
+    success_message = "KPI has been updated"
+
+
+class KPIDetail(LoginRequiredMixin, detail.DetailView):
+    model = models.KPI
+    template_name = "kpis/entries/kpi.html"
+
+
+class KPIEntryCreate(SuccessMessageMixin, edit.CreateView):
+    form_class = forms.BeamlineReportForm
+    template_name = "modal/form.html"
+    model = models.KPIEntry
+    success_url = reverse_lazy('dashboard')
+    success_message = "Beamline report has been created"
+
+    def form_valid(self, form):
+        month = datetime(form.cleaned_data['month'].year, form.cleaned_data['month'].month, 1).date()
+        for kpi in models.KPI.objects.all():
+            models.KPIEntry.objects.create(beamline=form.cleaned_data['beamline'], month=month, kpi=kpi)
+
+        return HttpResponseRedirect(self.success_url)
+
+
+class KPIEntryEdit(SuccessMessageMixin, edit.UpdateView):
+    form_class = forms.KPIEntryForm
+    template_name = "modal/form.html"
+    model = models.KPIEntry
+    success_url = reverse_lazy('dashboard')
+    success_message = "KPI information has been updated"
+
+
+class KPIEntryDetail(SuccessMessageMixin, edit.UpdateView):
+    form_class = forms.KPIEntryForm
+    template_name = "form.html"
+    model = models.KPI
+    success_url = reverse_lazy('dashboard')
+    success_message = "KPI has been created"
+
+    def get_initial(self):
+        initial = super().get_initial()
+        initial['kpis'] = models.KPI.objects.all()
+        return initial
+
+

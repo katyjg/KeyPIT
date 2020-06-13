@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+
+{% load static %}
+
+{% block extra_css %}
+    <link href="{% static "css/c3.min.css" %}" rel="stylesheet">
+    <link href="{% static "css/reports.min.css" %}" rel="stylesheet">
+{% endblock %}
+
+{% block page_heading %}
+    <h3 class="text-condensed">
+        <i class="text-muted fa fa-fw {% if object.is_editable %}fa-unlock{% else %}fa-lock{% endif %}"></i>
+        <span class="text-muted">{% if user.is_superuser %}{{ object.acronym|upper }} | {% endif %}</span><strong>{{ object.name }}</strong>
+    </h3>
+    <span class="text-muted">
+        <strong>1</strong> of <strong>{{ object.department.beamlines.count }}</strong> Beamline{{ object.department.beamlines.count|pluralize }} in {{ object.department }}
+    </span>
+{% endblock %}
+
+{% block full %}
+<div class="row">
+    <div id="kpi-report" class="col-12"></div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+    <script type="text/javascript" src="{% static "js/d3/d3.v5.min.js" %}"></script>
+    <script type="text/javascript" src="{% static "js/d3/d3.legend.js" %}"></script>
+    <script type="text/javascript" src="{% static "js/misc/showdown.min.js" %}"></script>
+    <script type="text/javascript" src="{% static "js/misc/c3.min.js" %}"></script>
+    <script type="text/javascript" src="{% static "js/mxlive-reports.v2.min.js" %}"></script>
+    <script type="text/javascript">
+        var report = {{ report | safe }};
+        $(document).ready(function() {
+            $('#kpi-report').liveReport({
+                data: report
+            });
+        });
+    </script>
+{% endblock %}

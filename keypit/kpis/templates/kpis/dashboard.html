@@ -12,14 +12,11 @@
 
 {% block object_tools %}
     {% if user.is_superuser %}
-        <a href="#!"  data-form-link="{% url "department-list" %}">
-            {% show_icon label='New Department' icon='ti ti-md ti-plus' %}
-        </a>
-        <a href="#!"  data-form-link="{% url "beamline-list" %}">
-            {% show_icon label='New Beamline' icon='ti ti-md ti-plus' %}
-        </a>
-        <a href="#!"  data-form-link="{% url "kpi-list" %}">
+        <a href="#!"  data-form-link="{% url "new-kpi" %}">
             {% show_icon label='New KPI' icon='ti ti-md ti-plus' %}
+        </a>
+        <a href="#!"  data-form-link="{% url "new-beamline-report" %}">
+            {% show_icon label='New Report' icon='ti ti-md ti-plus' %}
         </a>
     {% endif %}
 {% endblock %}

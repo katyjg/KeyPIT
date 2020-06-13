@@ -40,6 +40,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'itemlist',
+    'crispy_forms',
     'keypit.kpis',
     'django_cas_ng',
 ]
