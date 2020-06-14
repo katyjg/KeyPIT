@@ -6,12 +6,6 @@
         <span class="text-muted">{% if user.is_superuser %}{{ object.project|upper }} | {% endif %}</span><strong>{{ object.name }}</strong>
     </h3>
     <span class="text-muted">
-        {% if object.container.shipment %}
-            {% with object.container.shipment.num_samples as num_samples %}
-            <strong>1</strong> of <strong>{{ num_samples }}</strong> Sample{{ num_samples|pluralize }} in Shipment {{object.container.shipment.name}}
-            {% endwith %}
-        {% else %}
-            Sample not in a shipment.
-        {% endif %}
+        
     </span>
 {% endblock %}

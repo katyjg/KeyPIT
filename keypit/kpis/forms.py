@@ -63,7 +63,7 @@ class KPIForm(forms.ModelForm):
         )
 
 
-class BeamlineReportForm(forms.ModelForm):
+class BeamlineMonthForm(forms.ModelForm):
 
     class Meta:
         model = KPIEntry
@@ -76,7 +76,7 @@ class BeamlineReportForm(forms.ModelForm):
         self.footer = FooterHelper(self)
 
         self.body.title = u"New Beamline Report"
-        self.body.form_action = reverse_lazy('new-beamline-report')
+        self.body.form_action = reverse_lazy('new-beamline-month')
         self.body.layout = Layout(
             Div(
                 Div('beamline', css_class="col-6"),

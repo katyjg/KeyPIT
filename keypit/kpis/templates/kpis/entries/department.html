@@ -9,3 +9,30 @@
         <strong>{{ object.beamlines.count }}</strong> Beamline{{ object.beamlines.count|pluralize }}
     </span>
 {% endblock %}
+
+{% block full %}
+    <div class="col-12 col-sm-12">
+        <div class="card mb-4">
+            <div class="card-header p-1 text-center text-wide text-muted"><small>BEAMLINES</small></div>
+            <div class="list-group list-group-flush">
+                {% for beamline in object.beamlines.all %}
+                    <div class="p-2 list-group-item list-group-item-default">
+                        <div class="d-flex flex-row">
+                            <div class="pl-3 overflow-ellipsis text-muted align-self-center">
+                                <h5 class="m-0">
+                                    <a class="text-muted text-condensed" href="{% url "beamline-detail" beamline.pk %}"
+                                       title='View Beamline "{{ bl.name }}"'>
+                                        <strong>{{ beamline.acronym|upper }}</strong> | {{ beamline.name }}
+                                    </a>
+                                </h5>
+                                <div>
+                                    <strong>1</strong> of <strong>{{ object.beamlines.count }}</strong> Beamline{{ object.beamlines.count|pluralize }} in {{ object }}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+{% endblock %}

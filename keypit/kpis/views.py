@@ -84,18 +84,31 @@ class BeamlineDetail(LoginRequiredMixin, detail.DetailView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['report'] = stats.beamline_stats(self.object, period="month")
+
+        period = 'year'
+        filters = {}
+        if self.kwargs.get('year'):
+            year = self.kwargs.pop('year')
+            period = 'month'
+            filters = {'month__year': year}
+            context['year'] = year
+            context['months'] = stats.get_data_periods(period='month', **filters)
+
+        context['years'] = stats.get_data_periods(period='year')
+        context['report'] = stats.beamline_stats(self.object, period=period, **filters)
+
         return context
 
 
-class BeamlineReport(LoginRequiredMixin, detail.DetailView):
+class BeamlineMonth(LoginRequiredMixin, detail.DetailView):
     model = models.Beamline
-    template_name = "kpis/entries/beamline-report.html"
+    template_name = "kpis/entries/beamline-month.html"
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         year = self.kwargs.pop('year')
         month = self.kwargs.pop('month')
+
         entries = self.object.entries.filter(month__year=year, month__month=month)
         categories = models.KPICategory.objects.filter(pk__in=entries.values_list('kpi__category__id', flat=True).distinct())
         context['categories'] = {
@@ -103,7 +116,13 @@ class BeamlineReport(LoginRequiredMixin, detail.DetailView):
         }
         if entries.filter(kpi__category__isnull=True).exists():
             context['categories']['Other'] = entries.filter(kpi__category__isnull=True)
-        context['month'] = datetime.strftime(entries.first().month, "%B %Y")
+
+        filters = {'month__year': year}
+        context['years'] = stats.get_data_periods(period='year')
+        context['months'] = stats.get_data_periods(period='month', **filters)
+        context['year'] = year
+        context['month'] = month
+
         return context
 
 
@@ -140,7 +159,7 @@ class KPIDetail(LoginRequiredMixin, detail.DetailView):
 
 
 class KPIEntryCreate(SuccessMessageMixin, edit.CreateView):
-    form_class = forms.BeamlineReportForm
+    form_class = forms.BeamlineMonthForm
     template_name = "modal/form.html"
     model = models.KPIEntry
     success_url = reverse_lazy('dashboard')

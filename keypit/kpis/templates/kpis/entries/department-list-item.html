@@ -6,7 +6,7 @@
         </div>
         <div class="pl-3 overflow-ellipsis text-muted align-self-center">
             <h5 class="m-0">
-                <a class="text-muted text-condensed" href="{% url "department-list" %}"
+                <a class="text-muted text-condensed" href="{% url "department-detail" object.pk %}"
                    title='View Department "{{ department.name }}"'> <strong>{{ department.acronym|upper }}</strong> | {{ department.name }}
                 </a>
             </h5>

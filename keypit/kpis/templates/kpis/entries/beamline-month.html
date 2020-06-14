@@ -2,15 +2,48 @@
 
 {% load static %}
 {% load icons %}
+{% load date_tags %}
 
 {% block page_heading %}
     <h3 class="text-condensed">
         <i class="text-muted fa fa-fw {% if object.is_editable %}fa-unlock{% else %}fa-lock{% endif %}"></i>
-        <span class="text-muted">{% if user.is_superuser %}{{ object.acronym|upper }} | {% endif %}</span><strong>{{ month }}</strong>
+        <span class="text-muted">{% if user.is_superuser %}{{ object.acronym|upper }} | {% endif %}</span><strong>{{ month|month_name }} {{ year }}</strong>
     </h3>
     <span class="text-muted">
         <strong>1</strong> of <strong>{{ object.department.beamlines.count }}</strong> Beamline{{ object.department.beamlines.count|pluralize }} in {{ object.department }}
     </span>
+{% endblock %}
+
+{% block object_status %}
+    <div class="status-bar hidden-print">
+        <div class="row">
+            <div class="col-1">
+                <h5 class="my-0 p-2">
+                    <a href="{% url "beamline-detail" object.pk %}"><span class="badge badge-{% if year %}info{% else %}primary{% endif %}">&emsp;All&emsp;</span></a>&nbsp;
+                </h5>
+            </div>
+            {% if years %}
+                <div class="col-4">
+                    <h5 class="my-0 p-2">
+                    <span class="text-normal text-condensed text-muted">Year: </span>
+                    {% for yr in years %}
+                        <a href="{% url "beamline-month" object.pk yr month %}"><span class="badge badge-{% if yr == year %}primary{% else %}info{% endif %}">{{ yr }}</span></a>
+                    {% endfor %}
+                    </h5>
+                </div>
+            {% endif %}
+            {% if months %}
+                <div class="col-7 text-right">
+                <h5 class="my-0 p-2">
+                    <span class="text-normal text-condensed text-muted">Month: </span>
+                    {% for mt in months %}
+                        <a href="{% url "beamline-month" object.pk year mt %}"><span class="badge badge-{% if mt == month %}primary{% else %}info{% endif %}">{{ mt|month_abbr }}</span></a>
+                    {% endfor %}
+                </h5>
+                </div>
+            {% endif %}
+        </div>
+    </div>
 {% endblock %}
 
 {% block full %}
@@ -39,7 +72,7 @@
                             </div>
                             <div class="pl-3 align-self-center">
                                 <div class="m-0">
-                                    {% if entry.comments %}<strong>{{ entry.comments }}</strong>{% else %}<em>No additional comments</em>{% endif %}
+                                    {% if entry.comments %}<strong>{{ entry.comments|linebreaksbr }}</strong>{% else %}<em>No additional comments</em>{% endif %}
                                 </div>
                             </div>
                             <div class="tools-box ml-auto">
@@ -52,6 +85,8 @@
                 {% endfor %}
             </div>
         </div>
+    {% empty %}
+        <em>No information available.</em>
     {% endfor %}
     </div>
 </div>

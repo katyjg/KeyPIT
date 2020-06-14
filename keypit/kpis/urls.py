@@ -7,8 +7,9 @@ urlpatterns = [
     path('department/<int:pk>/', views.DepartmentDetail.as_view(), name='department-detail'),
     path('beamlines/', views.BeamlineList.as_view(), name='beamline-list'),
     path('beamlines/<int:pk>/', views.BeamlineDetail.as_view(), name='beamline-detail'),
-    path('beamlines/<int:pk>/<int:year>/<int:month>/', views.BeamlineReport.as_view(), name='beamline-report'),
-    path('beamlines/new-report/', views.KPIEntryCreate.as_view(), name='new-beamline-report'),
+    path('beamlines/<int:pk>/<int:year>/', views.BeamlineDetail.as_view(), name='beamline-year'),
+    path('beamlines/<int:pk>/<int:year>/<int:month>/', views.BeamlineMonth.as_view(), name='beamline-month'),
+    path('beamlines/new-month/', views.KPIEntryCreate.as_view(), name='new-beamline-month'),
     path('kpis/', views.KPIList.as_view(), name='kpi-list'),
     path('kpis/<int:pk>/', views.KPIDetail.as_view(), name='kpi-detail'),
 

@@ -1,3 +1,4 @@
+from django.db.models import Avg, Sum
 from django.utils import timezone
 
 import calendar
@@ -10,17 +11,19 @@ HOUR_SECONDS = 3600
 
 
 #@memoize(timeout=HOUR_SECONDS)
-def get_data_periods(period='year'):
+def get_data_periods(period='year', **filters):
     field = 'month__{}'.format(period)
-    return sorted(KPIEntry.objects.values_list(field, flat=True).distinct())
+    return sorted(KPIEntry.objects.filter(**filters).values_list(field, flat=True).distinct())
 
 
 def beamline_stats(beamline, period='month', **filters):
     field = 'month__{}'.format(period)
-    periods = get_data_periods(period=period)
-    entries = KPIEntry.objects.filter(beamline=beamline, **filters)
+    filters['beamline'] = beamline
+
+    entries = KPIEntry.objects.filter(**filters)
     categories = KPICategory.objects.filter(pk__in=entries.values_list('kpi__category__id', flat=True).distinct())
 
+    periods = get_data_periods(period=period)
     period_names = periods
 
     if period == 'month':
@@ -35,39 +38,65 @@ def beamline_stats(beamline, period='month', **filters):
         x_scale = 'time'
 
     details = []
+    summary_data = [[''] + period_names + ['Total / Average']]
     for cat in categories:
-        plots = []
+        content = []
         for kpi in KPI.objects.filter(category=cat, pk__in=entries.values_list('kpi__id', flat=True).distinct()):
-            kpi_entries = kpi.entries.filter(beamline=beamline, **filters).order_by(field)
-            kpi_values = list(kpi_entries.values_list('value', flat=True))
-            plots.append({
+            kpi_entries = kpi.entries.filter(**filters).order_by(field)
+
+            if period == 'month':
+                period_data = { p: kpi_entries.get(**{field: p}).value
+                    for p in periods if kpi_entries.filter(**{field: p}).exists() }
+                total = sum(period_data.values())
+            else:
+                if kpi.kind == kpi.TYPE.SUM:
+                    period_data = { p: kpi_entries.filter(**{field: p}).aggregate(sum=Sum('value'))['sum']
+                                    for p in periods }
+                    total = sum(period_data.values())
+                elif kpi.kind == kpi.TYPE.AVERAGE:
+                    period_data = {p: round(kpi_entries.filter(**{field: p}).aggregate(avg=Avg('value'))['avg'], 1)
+                                   for p in periods}
+                    total = round(sum(period_data.values()) / len(period_data), 1)
+
+            if kpi.kind == kpi.TYPE.SUM:
+                period_trend = [sum(list(period_data.values())[:i + 1]) for i in range(len(periods))]
+            else:
+                period_trend = list(period_data.values())
+
+
+            table_row = [[kpi.name] + [v for v in period_data.values()] + [total]]
+            summary_data += table_row
+
+            content.append({
                 'title': kpi.name,
                 'description': "<h4>{}</h4><p>{}</p>".format(kpi.name, kpi.description),
                 'kind': 'table',
-                'data': [[period.title()] + period_names] +
-                        [[kpi.name] + [round(v) if v else 0 for v in kpi_values]],
+                'data': [[''] + period_names + [kpi.get_kind_display()]] + table_row,
                 'header': 'column row',
                 'style': 'col-12',
-                'notes': "\n".join(["<strong>{}:</strong> {}".format(datetime.strftime(k.month, time_format), k.comments) for k in kpi_entries.filter(comments__isnull=True)])
+                'notes': "\n".join(
+                    ["<strong>{}:</strong> {}".format(datetime.strftime(k.month, '%B'), k.comments)
+                     for k in kpi_entries.exclude(comments="")]
+                )
             })
-            plots.append({
+            content.append({
                 'title': kpi.name,
                 'kind': 'columnchart',
                 'data': {
                     'x-label': period.title(),
                     'data': [
-                        {period.title(): p, "Value": kpi.entries.filter(beamline=beamline).get(**{field: p}).value }
-                        for p in periods
+                        { period.title(): p, "Value": v }
+                        for p, v in period_data.items()
                     ],
                 },
                 'style': 'col-12 col-md-6'
             })
-            plots.append({
-                'title': kpi.name,
+            content.append({
+                'title': "Trend Line",
                 'kind': 'lineplot',
                 'data': {
                     'x': [period.title()] + period_xvalues,
-                    'y1': [['Value'] + list(kpi.entries.filter(beamline=beamline, **filters).order_by(field).values_list('value', flat=True))],
+                    'y1': [['Value'] + period_trend],
                     'x-scale': x_scale,
                     'time-format': time_format
                 },
@@ -78,8 +107,18 @@ def beamline_stats(beamline, period='month', **filters):
             'title': cat.name,
             'description': cat.description,
             'style': 'row',
-            'content': plots
+            'content': content
         })
 
-    stats = { 'details': details }
+    summary_table = [{
+        'title': 'Summary',
+        'style': 'row mb-4',
+        'content': [{
+            'kind': 'table',
+            'header': 'column row',
+            'data': summary_data,
+            'style': 'col-12'
+        }]
+    }]
+    stats = { 'details': summary_table + details }
     return stats
