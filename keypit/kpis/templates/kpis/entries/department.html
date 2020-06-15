@@ -36,7 +36,7 @@
                 <h5 class="my-0 p-2">
                     <span class="text-normal text-condensed text-muted">Beamline: </span>
                     {% for beamline in object.beamlines.all %}
-                        <a href="{% url "beamline-detail" object.pk %}">
+                        <a href="{% url "beamline-detail" beamline.pk %}">
                             <span class="badge badge-info">{{ beamline.acronym }}</span>
                         </a>
                     {% endfor %}&nbsp;
