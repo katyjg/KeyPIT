@@ -1,0 +1,7 @@
+{% load icons %}
+
+{% if user.is_superuser %}
+    <a href="#!0" data-form-link="{% url 'new-kpi' %}" title="Add KPI">
+        {% show_icon label="Add KPI" icon="ti ti-md ti-plus" %}
+    </a>
+{% endif %}

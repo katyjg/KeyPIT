@@ -1,9 +1,11 @@
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from django.contrib.messages.views import SuccessMessageMixin
 from django.db.models import Count
-from django.views.generic import edit, detail, View
-from django.urls import reverse_lazy
 from django.http import HttpResponseRedirect
+from django.template.defaultfilters import linebreaksbr
+from django.urls import reverse_lazy
+from django.views.generic import edit, detail, View
+
 
 from itemlist.views import ItemListView
 from datetime import datetime
@@ -43,9 +45,8 @@ class Dashboard(UserPassesTestMixin, detail.DetailView):
         context = super(Dashboard, self).get_context_data(**kwargs)
         if self.request.user.is_superuser:
             departments = models.Department.objects.annotate(beamline_count=Count('beamlines', distinct=True))
-            kpis = models.KPI.objects.annotate(entries_count=Count('entries', distinct=True), beamlines_count=Count('entries__beamline', distinct=True))
+            kpis = models.KPI.objects.order_by('category__priority', 'priority').annotate(entries_count=Count('entries', distinct=True), beamlines_count=Count('entries__beamline', distinct=True))
             context.update(departments=departments, kpis=kpis)
-
         else:
             pass
         return context
@@ -54,7 +55,7 @@ class Dashboard(UserPassesTestMixin, detail.DetailView):
 class DepartmentList(ListViewMixin, ItemListView):
     model = models.Department
     list_filters = []
-    list_columns = ['id', 'name']
+    list_columns = ['acronym', 'name']
     list_search = ['name', 'acronym']
     link_url = 'department-detail'
     link_data = False
@@ -66,6 +67,29 @@ class DepartmentDetail(LoginRequiredMixin, detail.DetailView):
     model = models.Department
     template_name = "kpis/entries/department.html"
 
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        period = 'year'
+        filters = {'beamline__department': self.object}
+        context['years'] = stats.get_data_periods(period=period, **filters)
+
+        if self.kwargs.get('year'):
+            year = self.kwargs.pop('year')
+            period = 'month'
+            filters['month__year'] = year
+            context['year'] = year
+            context['months'] = stats.get_data_periods(period=period, **filters)
+            if context['months']:
+                if context['months'][-1] != 12: context['months'].append(context['months'][-1] + 1)
+            else:
+                context['months'] = [1]
+            if year not in context['years']: context['years'].append(year)
+
+            context['report'] = stats.beamline_stats(period=period, year=year, multi=True, **filters)
+        else:
+            context['report'] = stats.beamline_stats(period=period, **filters)
+        return context
+
 
 class BeamlineList(ListViewMixin, ItemListView):
     model = models.Beamline
@@ -74,7 +98,7 @@ class BeamlineList(ListViewMixin, ItemListView):
     list_search = ['name', 'acronym']
     link_url = 'beamline-detail'
     link_data = False
-    #ordering = ['status', '-modified']
+    ordering = ['department',]
     paginate_by = 25
 
 
@@ -84,20 +108,30 @@ class BeamlineDetail(LoginRequiredMixin, detail.DetailView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-
         period = 'year'
-        filters = {}
+        filters = {'beamline': self.object}
+        context['years'] = stats.get_data_periods(period=period, **filters)
+
         if self.kwargs.get('year'):
             year = self.kwargs.pop('year')
             period = 'month'
-            filters = {'month__year': year}
+            filters['month__year'] = year
             context['year'] = year
-            context['months'] = stats.get_data_periods(period='month', **filters)
-
-        context['years'] = stats.get_data_periods(period='year')
-        context['report'] = stats.beamline_stats(self.object, period=period, **filters)
+            context['months'] = stats.get_data_periods(period=period, **filters)
+            if context['months']:
+                if context['months'][-1] != 12: context['months'].append(context['months'][-1] + 1)
+            else:
+                context['months'] = [1]
+            if year not in context['years']: context['years'].append(year)
+            context['report'] = stats.beamline_stats(period=period, year=year, **filters)
+        else:
+            context['report'] = stats.beamline_stats(period=period, **filters)
 
         return context
+
+
+def format_description(val, record):
+    return linebreaksbr(val)
 
 
 class BeamlineMonth(LoginRequiredMixin, detail.DetailView):
@@ -120,6 +154,12 @@ class BeamlineMonth(LoginRequiredMixin, detail.DetailView):
         filters = {'month__year': year}
         context['years'] = stats.get_data_periods(period='year')
         context['months'] = stats.get_data_periods(period='month', **filters)
+        if context['months']:
+            if context['months'][-1] == 12: context['years'].append(context['years'][-1] + 1)
+            if context['months'][-1] != 12: context['months'].append(context['months'][-1] + 1)
+        else:
+            context['months'] = [1]
+            context['years'].append(context['years'][-1] + 1)
         context['year'] = year
         context['month'] = month
 
@@ -128,12 +168,14 @@ class BeamlineMonth(LoginRequiredMixin, detail.DetailView):
 
 class KPIList(ListViewMixin, ItemListView):
     model = models.KPI
-    list_filters = []
-    list_columns = ['id', 'name', 'description']
+    list_filters = ['category', 'kind']
+    list_columns = ['name', 'category', 'description', 'kind']
+    list_transforms = {'description': format_description}
     list_search = ['name', 'description']
-    #link_url = 'department-detail'
+    link_url = 'kpi-detail'
     link_data = False
-    #ordering = ['status', '-modified']
+    tool_template = 'kpis/components/kpi-list-tools.html'
+    ordering = ['category__priority', 'priority']
     paginate_by = 25
 
 
@@ -157,8 +199,43 @@ class KPIDetail(LoginRequiredMixin, detail.DetailView):
     model = models.KPI
     template_name = "kpis/entries/kpi.html"
 
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        period = 'year'
+        filters = {'kpi': self.object}
+        context['years'] = stats.get_data_periods(period=period, **filters)
 
-class KPIEntryCreate(SuccessMessageMixin, edit.CreateView):
+        if self.kwargs.get('year'):
+            year = self.kwargs.pop('year')
+            period = 'month'
+            filters['month__year'] = year
+            context['year'] = year
+            context['months'] = stats.get_data_periods(period=period, **filters)
+            if context['months']:
+                if context['months'][-1] != 12: context['months'].append(context['months'][-1] + 1)
+            else:
+                context['months'] = [1]
+            if year not in context['years']: context['years'].append(year)
+            context['report'] = stats.beamline_stats(period=period, year=year, multi=True, **filters)
+        else:
+            context['report'] = stats.beamline_stats(period=period, **filters)
+
+        return context
+
+
+class KPIEntryCreate(BeamlineMonth):
+
+    def get_context_data(self, **kwargs):
+        beamline = models.Beamline.objects.get(pk=self.kwargs.get('pk'))
+        month = datetime(self.kwargs.get('year'), self.kwargs.get('month'), 1).date()
+        for kpi in models.KPI.objects.all():
+            models.KPIEntry.objects.create(beamline=beamline, month=month, kpi=kpi)
+
+        context = super().get_context_data(**kwargs)
+        return context
+
+
+class KPIeEntryCreate(SuccessMessageMixin, edit.CreateView):
     form_class = forms.BeamlineMonthForm
     template_name = "modal/form.html"
     model = models.KPIEntry

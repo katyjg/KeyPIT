@@ -12,31 +12,15 @@
 
 {% block object_tools %}
     {% if user.is_superuser %}
-        <a href="#!"  data-form-link="{% url "new-kpi" %}">
-            {% show_icon label='New KPI' icon='ti ti-md ti-plus' %}
-        </a>
-        <a href="#!"  data-form-link="{% url "new-beamline-month" %}">
-            {% show_icon label='New Report' icon='ti ti-md ti-plus' %}
+        <a href="{% url "kpi-list" %}">
+            {% show_icon label='KPIs' icon='ti ti-md ti-key' %}
         </a>
     {% endif %}
 {% endblock %}
 
 {% block full %}
   <div class="row">
-    <div class="col-12 col-sm-8">
-        <div class="card mb-4">
-            <div class="card-header p-1 text-center text-wide text-muted"><small>KEY PERFORMANCE INDICATORS</small></div>
-            <div class="list-group list-group-flush">
-                {% for kpi in kpis %}
-                    {% include "kpis/entries/kpi-list-item.html"%}
-                {% endfor %}
-            </div>
-        </div>
-
-    </div>
-
-    <!-- right region -->
-    <div class="col-12 col-sm-4">
+    <div class="col-12 col-sm-12">
         <div class="card mb-4">
             <div class="card-header p-1 text-center text-wide text-muted"><small>DEPARTMENTS</small></div>
             <div class="list-group list-group-flush">

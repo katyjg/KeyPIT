@@ -28,7 +28,7 @@ class KPIForm(forms.ModelForm):
 
     class Meta:
         model = KPI
-        fields = ['name', 'description', 'category', 'kind']
+        fields = ['name', 'description', 'category', 'kind', 'priority']
         widgets = {
             'description': forms.Textarea(attrs={"cols": 54, "rows": 4}),
         }
@@ -46,13 +46,13 @@ class KPIForm(forms.ModelForm):
             self.body.form_action = reverse_lazy('new-kpi')
         self.body.layout = Layout(
             Div(
-                Div('category', css_class="col-12"),
+                Div('category', css_class="col-10"),
+                Div('priority', css_class="col-2"),
                 Div('name', css_class="col-12"),
                 Div('description', css_class="col-12"),
                 css_class="row"
             ),
             Div(
-
                 Div('kind', css_class="col-12"),
                 css_class="row"
             )
@@ -80,7 +80,7 @@ class BeamlineMonthForm(forms.ModelForm):
         self.body.layout = Layout(
             Div(
                 Div('beamline', css_class="col-6"),
-                Div(Field('month', template="kpis/components/datefield.html"), css_class="col-6"),
+                Div(Field('month'), css_class="col-6"),
                 css_class="row"
             ),
         )

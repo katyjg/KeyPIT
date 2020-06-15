@@ -1,11 +1,59 @@
-{% extends "base.html" %}
+{% extends "kpis/report-base.html" %}
+
+{% load icons %}
 
 {% block page_heading %}
     <h3 class="text-condensed">
-        <i class="text-muted fa fa-fw {% if object.is_editable %}fa-unlock{% else %}fa-lock{% endif %}"></i>
-        <span class="text-muted">{% if user.is_superuser %}{{ object.project|upper }} | {% endif %}</span><strong>{{ object.name }}</strong>
+        <i class="text-muted ti ti-key"></i>
+        <span class="text-muted">{{ object.category.name|upper }} | </span><strong>{{ object.name }}</strong>
     </h3>
     <span class="text-muted">
-
+        Key Performance Indicator
     </span>
+{% endblock %}
+
+{% block object_status %}
+    <div class="status-bar hidden-print">
+        <div class="row">
+            <div class="col-1">
+                <h5 class="my-0 p-2">
+                    <a href="{% url "kpi-detail" object.pk %}"><span class="badge badge-{% if year %}info{% else %}primary{% endif %}">&emsp;All&emsp;</span></a>&nbsp;
+                </h5>
+            </div>
+            {% if years %}
+                <div class="col-4">
+                    <h5 class="my-0 p-2">
+                    <span class="text-normal text-condensed text-muted">Year: </span>
+                    {% for yr in years %}
+                        <a href="{% url "kpi-year" object.pk yr %}"><span class="badge badge-{% if yr == year %}primary{% else %}info{% endif %}">{{ yr }}</span></a>
+                    {% endfor %}
+                    </h5>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+{% endblock %}
+
+{% block object_tools %}
+    <a href="#!" data-form-link="{{ handler }}edit/">
+        {% show_icon label='Edit' icon='ti ti-md ti-pencil-alt' %}
+    </a>
+{% endblock %}
+
+{% block extra_js %}
+    {{ block.super }}
+    <script type="text/javascript">
+        var report = {{ report | safe }};
+        $(document).ready(function() {
+            $('#kpi-report').liveReport({
+                data: report
+            });
+        });
+    </script>
+{% endblock %}
+
+{% block full %}
+    <div class="row">
+        <div id="kpi-report" class="col-12"></div>
+    </div>
 {% endblock %}

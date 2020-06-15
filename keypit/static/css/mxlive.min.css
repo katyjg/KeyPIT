@@ -7174,7 +7174,7 @@ a {
   color: #47243A; }
 
 header > nav {
-  background-color: var(--primary) !important;
+  background-color: var(--primary);
   max-height: 51px !important; }
 
 main {
@@ -8521,3 +8521,17 @@ input::placeholder {
 
 .datepicker:after, .datepicker:before {
   display: none !important; }
+
+/* KeyPIT Styles */
+@keyframes bg-cycle {
+  0% {
+    background-color: #512d6d; }
+  33.3% {
+    background-color: #990099; }
+  50% {
+    background-color: #41864A; }
+  100% {
+    background-color: #006eb6; } }
+
+nav.animated-bg {
+  animation: bg-cycle 40000ms infinite alternate; }

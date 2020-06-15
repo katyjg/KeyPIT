@@ -4,6 +4,10 @@
 {% load icons %}
 {% load date_tags %}
 
+{% block extra_css %}
+    <link href="{% static "css/reports.min.css" %}" rel="stylesheet">
+{% endblock %}
+
 {% block page_heading %}
     <h3 class="text-condensed">
         <i class="text-muted fa fa-fw {% if object.is_editable %}fa-unlock{% else %}fa-lock{% endif %}"></i>
@@ -27,7 +31,7 @@
                     <h5 class="my-0 p-2">
                     <span class="text-normal text-condensed text-muted">Year: </span>
                     {% for yr in years %}
-                        <a href="{% url "beamline-month" object.pk yr month %}"><span class="badge badge-{% if yr == year %}primary{% else %}info{% endif %}">{{ yr }}</span></a>
+                        <a href="{% url "beamline-year" object.pk yr %}"><span class="badge badge-{% if yr == year %}primary{% else %}info{% endif %}">{{ yr }}</span></a>
                     {% endfor %}
                     </h5>
                 </div>
@@ -48,20 +52,18 @@
 
 {% block full %}
 <div class="row">
-    <div class="col-12">
+    <div class="col-12 report-viewer">
     {% for cat, entries in categories.items %}
+        <h3 class="section-title col-12"><span class="text-muted"><strong>{{ cat.priority_display }}</strong></span> {{ cat }}</h3>
+        {% for entry in entries %}
         <div class="card mb-4">
-            <div class="card-header p-1 text-center text-wide text-muted"><small>{{ cat|upper }}</small></div>
+            <div class="card-header py-1 px-3 text-wide text-muted text-bold">{{ entry.kpi.priority_display }}. {{ entry.kpi.name }}</div>
             <div class="list-group list-group-flush">
-                {% for entry in entries %}
                     <div class="p-2 list-group-item list-group-item-action list-group-item-default">
                         <div class="d-flex flex-row">
-                            <div class="pl-3 text-muted align-self-center">
-                                <h5 class="m-0 mt-2"><strong>
-                                    {{ entry.kpi.name }}
-                                </strong></h5>
+                            <div class="pl-3 pt-2 text-muted align-self-center">
                                 <div>
-                                    {{ entry.kpi.description }}
+                                    {{ entry.kpi.description|linebreaksbr }}
                                 </div>
                             </div>
                         </div>
@@ -82,11 +84,28 @@
                             </div>
                         </div>
                     </div>
-                {% endfor %}
             </div>
         </div>
+            {% endfor %}
     {% empty %}
-        <em>No information available.</em>
+        <div class="card mb-4">
+            <div class="list-group list-group-flush">
+                <div class="list-group-item empty p-2">
+                    <a href="{% url "new-beamline-month" beamline.pk year month %}" class="d-flex flex-row">
+                        <div class="box-status">
+                            <div class="text-center text-muted">
+                                <div title="Create a New Monthly Report" class="ti ti-md ti-plus"></div>
+                                <div><small>Start Now</small></div>
+                            </div>
+                        </div>
+                        <div class="pl-3 overflow-ellipsis flex-shrink-1 align-self-center">
+                            <h4 class="p-0 m-0 text-condensed">Click here to start a new monthly KPI report for this beamline</h4>
+                            <span>{{ beamline.acronym|upper }} | {{ month|month_name }} {{ year }}</span>
+                        </div>
+                    </a>
+                </div>
+            </div>
+        </div>
     {% endfor %}
     </div>
 </div>

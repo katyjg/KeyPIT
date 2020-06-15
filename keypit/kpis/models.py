@@ -3,6 +3,7 @@ from django.contrib.auth.models import AbstractUser
 from django.utils.translation import ugettext as _
 
 from model_utils import Choices
+import string
 
 
 class Manager(AbstractUser):
@@ -35,13 +36,19 @@ class Beamline(models.Model):
 class KPICategory(models.Model):
     name = models.CharField(max_length=250)
     description = models.CharField(max_length=600, blank=True)
+    priority = models.IntegerField(default=0)
 
     def __str__(self):
         return self.name
 
+    def priority_display(self):
+        number = list(KPICategory.objects.order_by('priority')).index(self)
+        return "{}".format(number + 1)
+
     class Meta:
         verbose_name = "KPI Category"
         verbose_name_plural = "KPI Categories"
+        ordering = ['priority',]
 
 
 class KPI(models.Model):
@@ -57,12 +64,18 @@ class KPI(models.Model):
     description = models.CharField(max_length=600)
     category = models.ForeignKey(KPICategory, blank=True, null=True, on_delete=models.SET_NULL, related_name="kpis")
     kind = models.IntegerField(choices=TYPE, default=TYPE.SUM)
+    priority = models.IntegerField(default=0)
 
     def __str__(self):
         return self.name
 
+    def priority_display(self):
+        letter = list(self.category.kpis.order_by('priority')).index(self)
+        return "{}{}".format(self.category.priority_display(), string.ascii_lowercase[letter])
+
     class Meta:
         verbose_name = "Key Performance Indicator"
+        ordering = ['category__priority', 'priority',]
 
 
 class KPIEntry(models.Model):

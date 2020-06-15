@@ -1,8 +1,10 @@
 {% load icons %}
 <div class="p-2 list-group-item list-group-item-default">
     <div class="d-flex flex-row">
-        <div class="box-status text-center">
-            {% show_icon label='' icon='ti ti-md ti-clipboard' %}
+        <div class="box-status text-center" title="{{ kpi.category }}">
+            <span class="text-large text-center">{{ kpi.priority_display }}</span><br/>
+            <span class="text-small text-condensed text-center">{{ kpi.category|upper|truncatechars:"6" }}</span>
+
         </div>
         <div class="pl-3 overflow-ellipsis text-muted align-self-center">
             <h5 class="m-0">
@@ -12,9 +14,13 @@
             </h5>
             <div>
                 <strong>{{ kpi.beamlines_count }}</strong> Beamline{{ kpi.beamlines_count|pluralize }} /
-                <strong>{{ kpi.entries_count }}</strong> Entries{{ kpi.entries_count|pluralize }}
+                <strong>{{ kpi.entries_count }}</strong> Entr{{ kpi.entries_count|pluralize:"y,ies" }}
             </div>
         </div>
-
+        <div class="tools-box ml-auto">
+            <a href="#!"  data-form-link="{% url "kpi-edit" kpi.pk %}" title="Edit this KPI">
+                {% show_icon label='Edit' icon='ti ti-md ti-pencil' color='info' %}
+            </a>
+        </div>
     </div>
 </div>
