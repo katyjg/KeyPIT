@@ -28,9 +28,13 @@ class Beamline(models.Model):
     name = models.CharField(max_length=600)
     acronym = models.CharField(max_length=50)
     department = models.ForeignKey(Department, blank=True, null=True, on_delete=models.SET_NULL, related_name="beamlines")
+    beamlines = models.CharField(max_length=200, blank=True, null=True)
 
     def __str__(self):
         return self.acronym
+
+    def beamline_acronyms(self):
+        return self.beamlines and [ba.strip() for ba in self.beamlines.split(',')] or [self.acronym]
 
 
 class KPICategory(models.Model):

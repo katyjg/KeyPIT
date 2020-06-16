@@ -48,45 +48,52 @@ class Command(BaseCommand):
                     st += timedelta(hours=8)
         n_shifts = set(n_shifts)
 
-        for bl in Beamline.objects.all():
-            KPIEntry.objects.filter(beamline=bl, month=start, kpi__id=TOTAL_NORMAL_SHIFTS).update(value=len(n_shifts))
-
-            # Import Facility Schedule(s)
-            url = "{}schedule/beamtime/{}/?start={}&end={}".format(USO_API, bl.acronym, qstart, qend)
-            r = requests.get(url)
-            if r.status_code == 200:
-                visits = [s for s in r.json() if not s['cancelled']]
-                shifts = []
-                for visit in visits:
-                    st = datetime.strptime(visit['start'], '%Y-%m-%dT%H:%M:%SZ')
-                    while st < datetime.strptime(visit['end'], '%Y-%m-%dT%H:%M:%SZ'):
-                        shifts.append(format_localtime(st))
-                        st += timedelta(hours=8)
-            else:
-                print("Schedule not found for {}".format(bl.acronym))
-            used_shifts = len(n_shifts.intersection(set(shifts)))
-            percent_used = n_shifts and 100. * used_shifts / len(n_shifts) or 0
-            KPIEntry.objects.filter(beamline=bl, month=start.date(), kpi__id=TOTAL_SHIFTS_USED).update(value=used_shifts)
-            KPIEntry.objects.filter(beamline=bl, month=start.date(), kpi__id=BEAMLINE_AVAILABILITY).update(value=percent_used)
-
-            # Import Facility Publications
-            url = "{}publications/article/{}/".format(USO_API, bl.acronym)
-            r = requests.get(url)
-            if r.status_code == 200:
-                dates = [datetime.strptime(s['date'], '%Y-%m-%d') for s in r.json()]
-                articles = [d for d in dates if d.year == start.year and d.month == start.month]
-
+        for beamline in Beamline.objects.all():
+            bl_n_shifts = 0
+            bl_used_shifts = 0
+            articles = []
             theses = []
-            for thesis in ['msc_thesis', 'phd_thesis']:
-                url = "{}publications/{}/{}/".format(USO_API, thesis, bl.acronym)
+            for bl in beamline.beamline_acronyms():
+                # Import Facility Schedule(s)
+                url = "{}schedule/beamtime/{}/?start={}&end={}".format(USO_API, bl, qstart, qend)
+                r = requests.get(url)
+                if r.status_code == 200:
+                    visits = [s for s in r.json() if not s['cancelled']]
+                    shifts = []
+                    for visit in visits:
+                        st = datetime.strptime(visit['start'], '%Y-%m-%dT%H:%M:%SZ')
+                        while st < datetime.strptime(visit['end'], '%Y-%m-%dT%H:%M:%SZ'):
+                            shifts.append(format_localtime(st))
+                            st += timedelta(hours=8)
+                else:
+                    shifts = []
+                    print("Schedule not found for {}".format(bl))
+                bl_n_shifts += len(n_shifts)
+                bl_used_shifts += len(n_shifts.intersection(set(shifts)))
+                #percent_used = n_shifts and 100. * used_shifts / len(n_shifts) or 0
+
+                #KPIEntry.objects.filter(beamline=bl, month=start.date(), kpi__id=BEAMLINE_AVAILABILITY, defaults={'value': percent_used})
+
+                # Import Facility Publications
+                url = "{}publications/article/{}/".format(USO_API, bl)
                 r = requests.get(url)
                 if r.status_code == 200:
                     dates = [datetime.strptime(s['date'], '%Y-%m-%d') for s in r.json()]
-                    theses += [d for d in dates if d.year == start.year and d.month == start.month]
+                    articles += [d for d in dates if d.year == start.year and d.month == start.month]
 
-            KPIEntry.objects.update_or_create(beamline=bl, month=start.date(), kpi=KPI.objects.get(pk=PEER_REVIEWED_ARTICLES),
-                                              defaults={'value':len(articles)})
-            KPIEntry.objects.update_or_create(beamline=bl, month=start.date(), kpi=KPI.objects.get(pk=THESES),
-                                              defaults={'value':len(theses)})
+                for thesis in ['msc_thesis', 'phd_thesis']:
+                    url = "{}publications/{}/{}/".format(USO_API, thesis, bl)
+                    r = requests.get(url)
+                    if r.status_code == 200:
+                        dates = [datetime.strptime(s['date'], '%Y-%m-%d') for s in r.json()]
+                        theses += [d for d in dates if d.year == start.year and d.month == start.month]
 
+            KPIEntry.objects.update_or_create(beamline=beamline, month=start, kpi=KPI.objects.get(pk=TOTAL_NORMAL_SHIFTS),
+                                              defaults={'value': bl_n_shifts})
+            KPIEntry.objects.update_or_create(beamline=beamline, month=start.date(), kpi=KPI.objects.get(pk=TOTAL_SHIFTS_USED),
+                                              defaults={'value': bl_used_shifts})
 
+            KPIEntry.objects.update_or_create(beamline=beamline, month=start.date(), kpi=KPI.objects.get(pk=PEER_REVIEWED_ARTICLES),
+                                              defaults={'value': len(articles)})
+            KPIEntry.objects.update_or_create(beamline=beamline, month=start.date(), kpi=KPI.objects.get(pk=THESES),
+                                              defaults={'value': len(theses)})

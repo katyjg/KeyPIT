@@ -23,7 +23,7 @@ def beamline_stats(period='month', year=timezone.now().year, **filters):
 
     if entries:
         #categories = KPICategory.objects.filter(pk__in=entries.values_list('kpi__category__id', flat=True).distinct())
-        categories = entries.values('kpi__category', 'kpi__category__name', 'kpi__category__description').distinct()
+        categories = entries.values('kpi__category', 'kpi__category__name', 'kpi__category__description').distinct().order_by('kpi__category__priority')
         beamlines = entries.values('beamline').distinct().count() > 1
 
         periods = get_data_periods(period=period)
@@ -34,7 +34,7 @@ def beamline_stats(period='month', year=timezone.now().year, **filters):
         summary_data = [[''] + period_names + ['Total / Avg']]
         for cat in categories:
             content = []
-            for kpi in KPI.objects.filter(category__id=cat['kpi__category'], pk__in=entries.values_list('kpi__id', flat=True).distinct()):
+            for kpi in KPI.objects.filter(category__id=cat['kpi__category'], pk__in=entries.values_list('kpi__id', flat=True).distinct()).order_by('priority'):
                 kpi_entries = kpi.entries.filter(**filters).order_by(field)
                 kpi_periods = get_data_periods(period=period, **{'kpi': kpi})
                 kpi_period_names = period == 'month' and [calendar.month_abbr[per].title() for per in kpi_periods] or kpi_periods
