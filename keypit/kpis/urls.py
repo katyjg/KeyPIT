@@ -3,6 +3,8 @@ from django.urls import path
 from . import views
 
 urlpatterns = [
+    path('<int:year>/', views.Dashboard.as_view(), name='all-year'),
+
     path('departments/', views.DepartmentList.as_view(), name='department-list'),
     path('departments/<int:pk>/', views.DepartmentDetail.as_view(), name='department-detail'),
     path('departments/<int:pk>/<int:year>/', views.DepartmentDetail.as_view(), name='department-year'),
@@ -17,6 +19,6 @@ urlpatterns = [
     path('kpis/<int:pk>/<int:year>/', views.KPIDetail.as_view(), name='kpi-year'),
     path('kpis/<int:pk>/edit/', views.KPIEdit.as_view(), name='kpi-edit'),
 
-    path('entries/new/', views.KPIEntryCreate.as_view(), name='new-kpientry'),
+    path('entries/<int:pk>/new/', views.BeamlineMonthCreate.as_view(), name='new-month'),
     path('entries/<int:pk>/edit/', views.KPIEntryEdit.as_view(), name='kpientry-edit'),
 ]

@@ -1,10 +1,10 @@
-{% extends "base.html" %}
+{% extends "kpis/report-base.html" %}
 {% load icons %}
 {% load msgs %}
 {% load settings %}
 
 {% block page_heading %}
-    <h3 class="text-condensed"> <span class="text-muted"><strong>{{ user.username|upper }}</strong> |</span> User</h3>
+    <h3 class="text-condensed"> <span class="text-muted"><strong>{{ user.username|upper }}</strong> |</span> All Data </h3>
     <span class="text-muted hidden-xs">
         Start here to manage and monitor KPIs, and review historical data.
     </span>
@@ -18,21 +18,54 @@
     {% endif %}
 {% endblock %}
 
-{% block full %}
-  <div class="row">
-    <div class="col-12 col-sm-12">
-        <div class="card mb-4">
-            <div class="card-header p-1 text-center text-wide text-muted"><small>DEPARTMENTS</small></div>
-            <div class="list-group list-group-flush">
-                {% for department in departments %}
-                    {% include "kpis/entries/department-list-item.html"%}
-                {% endfor %}
+{% block object_status %}
+    <div class="status-bar hidden-print">
+        <div class="row">
+            <div class="col-1">
+                <h5 class="my-0 p-2">
+                    <a href="{% url "dashboard" %}"><span class="badge badge-primary">&emsp;All&emsp;</span></a>&nbsp;
+                </h5>
+            </div>
+            {% if years %}
+                <div class="col-4">
+                    <h5 class="my-0 p-2">
+                    <span class="text-normal text-condensed text-muted">Year: </span>
+                    {% for yr in years %}
+                        <a href="{% url "all-year" yr %}">
+                            <span class="badge badge-{% if yr == year %}primary{% else %}info{% endif %}">{{ yr }}</span>
+                        </a>
+                    {% endfor %}
+                    </h5>
+                </div>
+            {% endif %}
+            <div class="{% if years %}col-7{% else %}col-11{% endif %} text-right">
+                <h5 class="my-0 p-2">
+                    <span class="text-normal text-condensed text-muted">Department: </span>
+                    {% for department in departments %}
+                        <a href="{% url "department-detail" department.pk %}">
+                            <span class="badge badge-info">{{ department.acronym }}</span>
+                        </a>
+                    {% endfor %}&nbsp;
+                </h5>
             </div>
         </div>
     </div>
+{% endblock %}
 
-</div>
-
+{% block full %}
+    <div class="row">
+        <div id="kpi-report" class="col-12"></div>
+    </div>
 {% endblock %}	
 
-
+{% block extra_js %}
+    {{ block.super }}
+    <script type="text/javascript">
+        var report = {{ report | safe }};
+        $(document).ready(function() {
+            $('#kpi-report').liveReport({
+                data: report
+            });
+        });
+    </script>
+{% endblock %}

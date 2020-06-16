@@ -64,10 +64,12 @@ class KPIForm(forms.ModelForm):
 
 
 class BeamlineMonthForm(forms.ModelForm):
+    month = forms.IntegerField(min_value=1, max_value=12)
+    year = forms.IntegerField(min_value=1969, max_value=3000)
 
     class Meta:
         model = KPIEntry
-        fields = ['beamline', 'month']
+        fields = ['beamline',]
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -76,10 +78,11 @@ class BeamlineMonthForm(forms.ModelForm):
         self.footer = FooterHelper(self)
 
         self.body.title = u"New Beamline Report"
-        self.body.form_action = reverse_lazy('new-beamline-month')
+        self.body.form_action = reverse_lazy('new-month', kwargs={'pk': self.initial.get('beamline').pk})
         self.body.layout = Layout(
             Div(
-                Div('beamline', css_class="col-6"),
+                Div(Field('beamline', readonly=True), css_class="col-12"),
+                Div(Field('year'), css_class="col-6"),
                 Div(Field('month'), css_class="col-6"),
                 css_class="row"
             ),

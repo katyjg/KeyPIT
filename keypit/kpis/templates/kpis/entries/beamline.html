@@ -1,5 +1,6 @@
 {% extends "kpis/report-base.html" %}
 
+{% load icons %}
 {% load date_tags %}
 
 {% block page_heading %}
@@ -11,6 +12,14 @@
     <span class="text-muted">
         <strong>1</strong> of <strong>{{ object.department.beamlines.count }}</strong> Beamline{{ object.department.beamlines.count|pluralize }} in <a href="{% url 'department-detail' object.department.pk %}">{{ object.department }}</a>
     </span>
+{% endblock %}
+
+{% block object_tools %}
+    {% if user.is_superuser %}
+        <a href="#!0" data-form-link="{% url "new-month" object.pk %}">
+            {% show_icon label='New Report' icon='ti ti-md ti-plus' %}
+        </a>
+    {% endif %}
 {% endblock %}
 
 {% block object_status %}

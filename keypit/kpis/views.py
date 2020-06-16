@@ -44,11 +44,24 @@ class Dashboard(UserPassesTestMixin, detail.DetailView):
     def get_context_data(self, **kwargs):
         context = super(Dashboard, self).get_context_data(**kwargs)
         if self.request.user.is_superuser:
-            departments = models.Department.objects.annotate(beamline_count=Count('beamlines', distinct=True))
-            kpis = models.KPI.objects.order_by('category__priority', 'priority').annotate(entries_count=Count('entries', distinct=True), beamlines_count=Count('entries__beamline', distinct=True))
-            context.update(departments=departments, kpis=kpis)
+            departments = models.Department.objects.all()
+            context.update(departments=departments)
         else:
             pass
+
+        filters = {}
+        period = 'year'
+        context['years'] = stats.get_data_periods(period=period, **filters)
+        if self.kwargs.get('year'):
+            year = self.kwargs.pop('year')
+            period = 'month'
+            filters['month__year'] = year
+            context['year'] = year
+            context['months'] = stats.get_data_periods(period=period, **filters)
+            context['report'] = stats.beamline_stats(period=period, year=year, **filters)
+        else:
+            context['report'] = stats.beamline_stats(period=period, **filters)
+
         return context
 
 
@@ -79,13 +92,7 @@ class DepartmentDetail(LoginRequiredMixin, detail.DetailView):
             filters['month__year'] = year
             context['year'] = year
             context['months'] = stats.get_data_periods(period=period, **filters)
-            if context['months']:
-                if context['months'][-1] != 12: context['months'].append(context['months'][-1] + 1)
-            else:
-                context['months'] = [1]
-            if year not in context['years']: context['years'].append(year)
-
-            context['report'] = stats.beamline_stats(period=period, year=year, multi=True, **filters)
+            context['report'] = stats.beamline_stats(period=period, year=year, **filters)
         else:
             context['report'] = stats.beamline_stats(period=period, **filters)
         return context
@@ -118,11 +125,6 @@ class BeamlineDetail(LoginRequiredMixin, detail.DetailView):
             filters['month__year'] = year
             context['year'] = year
             context['months'] = stats.get_data_periods(period=period, **filters)
-            if context['months']:
-                if context['months'][-1] != 12: context['months'].append(context['months'][-1] + 1)
-            else:
-                context['months'] = [1]
-            if year not in context['years']: context['years'].append(year)
             context['report'] = stats.beamline_stats(period=period, year=year, **filters)
         else:
             context['report'] = stats.beamline_stats(period=period, **filters)
@@ -154,16 +156,29 @@ class BeamlineMonth(LoginRequiredMixin, detail.DetailView):
         filters = {'month__year': year}
         context['years'] = stats.get_data_periods(period='year')
         context['months'] = stats.get_data_periods(period='month', **filters)
-        if context['months']:
-            if context['months'][-1] == 12: context['years'].append(context['years'][-1] + 1)
-            if context['months'][-1] != 12: context['months'].append(context['months'][-1] + 1)
-        else:
-            context['months'] = [1]
-            context['years'].append(context['years'][-1] + 1)
         context['year'] = year
         context['month'] = month
 
         return context
+
+
+class BeamlineMonthCreate(SuccessMessageMixin, edit.CreateView):
+    form_class = forms.BeamlineMonthForm
+    template_name = "modal/form.html"
+    model = models.KPIEntry
+    success_url = reverse_lazy('dashboard')
+    success_message = "Beamline report has been created"
+
+    def get_initial(self):
+        initial = super().get_initial()
+        initial['beamline'] = models.Beamline.objects.get(pk=self.kwargs.get('pk'))
+        return initial
+
+    def form_valid(self, form):
+        dt = datetime(form.cleaned_data['year'], form.cleaned_data['month'], 1).date()
+        for kpi in models.KPI.objects.all():
+            models.KPIEntry.objects.get_or_create(beamline=form.cleaned_data['beamline'], month=dt, kpi=kpi)
+        return HttpResponseRedirect(self.success_url)
 
 
 class KPIList(ListViewMixin, ItemListView):
@@ -211,12 +226,7 @@ class KPIDetail(LoginRequiredMixin, detail.DetailView):
             filters['month__year'] = year
             context['year'] = year
             context['months'] = stats.get_data_periods(period=period, **filters)
-            if context['months']:
-                if context['months'][-1] != 12: context['months'].append(context['months'][-1] + 1)
-            else:
-                context['months'] = [1]
-            if year not in context['years']: context['years'].append(year)
-            context['report'] = stats.beamline_stats(period=period, year=year, multi=True, **filters)
+            context['report'] = stats.beamline_stats(period=period, year=year, **filters)
         else:
             context['report'] = stats.beamline_stats(period=period, **filters)
 
@@ -229,25 +239,10 @@ class KPIEntryCreate(BeamlineMonth):
         beamline = models.Beamline.objects.get(pk=self.kwargs.get('pk'))
         month = datetime(self.kwargs.get('year'), self.kwargs.get('month'), 1).date()
         for kpi in models.KPI.objects.all():
-            models.KPIEntry.objects.create(beamline=beamline, month=month, kpi=kpi)
+            models.KPIEntry.objects.get_or_create(beamline=beamline, month=month, kpi=kpi)
 
         context = super().get_context_data(**kwargs)
         return context
-
-
-class KPIeEntryCreate(SuccessMessageMixin, edit.CreateView):
-    form_class = forms.BeamlineMonthForm
-    template_name = "modal/form.html"
-    model = models.KPIEntry
-    success_url = reverse_lazy('dashboard')
-    success_message = "Beamline report has been created"
-
-    def form_valid(self, form):
-        month = datetime(form.cleaned_data['month'].year, form.cleaned_data['month'].month, 1).date()
-        for kpi in models.KPI.objects.all():
-            models.KPIEntry.objects.create(beamline=form.cleaned_data['beamline'], month=month, kpi=kpi)
-
-        return HttpResponseRedirect(self.success_url)
 
 
 class KPIEntryEdit(SuccessMessageMixin, edit.UpdateView):
