@@ -31,7 +31,6 @@ ALLOWED_HOSTS = []
 
 
 # Application definition
-
 INSTALLED_APPS = [
     'django.contrib.admin',
     'django.contrib.auth',
@@ -43,7 +42,6 @@ INSTALLED_APPS = [
     'itemlist',
     'crispy_forms',
     'keypit.kpis',
-    'django_cas_ng',
 ]
 
 MIDDLEWARE = [
@@ -109,7 +107,6 @@ AUTH_PASSWORD_VALIDATORS = [
 
 AUTHENTICATION_BACKENDS = [
     'django.contrib.auth.backends.ModelBackend',
-    'django_cas_ng.backends.CASBackend'
 ]
 
 AUTH_USER_MODEL = 'kpis.Manager'
@@ -135,7 +132,47 @@ STATICFILES_DIRS = [
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'local/media')
 
+CAS_ENABLED = True
+
 try:
     from local.settings import *
 except ImportError:
     pass
+
+if CAS_ENABLED:
+    INSTALLED_APPS.append('django_cas_ng')
+    MIDDLEWARE.append('django_cas_ng.middleware.CASMiddleware')
+    AUTHENTICATION_BACKENDS.append('django_cas_ng.backends.CASBackend')
+
+    CAS_SERVER_URL = "https://cas-test.clsi.ca/"
+    CAS_SERVICE_DESCRIPTION = "KeyPIT"
+    CAS_LOGOUT_COMPLETELY = True
+    CAS_SINGLE_SIGN_OUT = True
+    CAS_CREATE_USER = True
+    CAS_REDIRECT_URL = '/'
+    CAS_LOGOUT_URL_NAME = 'logout'
+
+PEOPLE_TOKEN = 'd91fa59aab904ec78bee228c3e3af861'
+
+import os
+
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+        },
+    },
+    'root': {
+        'handlers': ['console'],
+        'level': 'INFO',
+    },
+    'loggers': {
+        'django': {
+            'handlers': ['console'],
+            'level': 'INFO',
+            'propagate': False,
+        },
+    },
+}

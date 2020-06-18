@@ -35,7 +35,7 @@
 {% endblock %}
 
 {% block object_tools %}
-    <a href="#!" data-form-link="{{ handler }}edit/">
+    <a href="#!" data-form-link="{% url 'kpi-edit' object.pk %}">
         {% show_icon label='Edit' icon='ti ti-md ti-pencil-alt' %}
     </a>
 {% endblock %}

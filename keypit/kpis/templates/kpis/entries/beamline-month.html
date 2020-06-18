@@ -4,14 +4,17 @@
 {% load icons %}
 {% load date_tags %}
 
-{% block extra_css %}
-    <link href="{% static "css/reports.min.css" %}" rel="stylesheet">
+{% block object_tools %}
+    {% if owner %}
+        <a href="#!0" data-form-link="{% url "new-month" object.pk %}">
+            {% show_icon label='New Report' icon='ti ti-md ti-plus' %}
+        </a>
+    {% endif %}
 {% endblock %}
 
 {% block page_heading %}
     <h3 class="text-condensed">
-        <i class="text-muted fa fa-fw {% if object.is_editable %}fa-unlock{% else %}fa-lock{% endif %}"></i>
-        <span class="text-muted">{% if user.is_superuser %}{{ object.acronym|upper }} | {% endif %}</span><strong>{{ month|month_name }} {{ year }}</strong>
+        <span class="text-muted">{{ object.acronym|upper }} | </span><strong>{{ month|month_name }} {{ year }}</strong>
     </h3>
     <span class="text-muted">
         <strong>1</strong> of <strong>{{ object.department.beamlines.count }}</strong> Beamline{{ object.department.beamlines.count|pluralize }} in {{ object.department }}
@@ -52,41 +55,47 @@
 
 {% block full %}
 <div class="row">
-    <div class="col-12 report-viewer">
+    <div class="col-12 report-viewer pt-0">
     {% for cat, entries in categories.items %}
-        <h3 class="section-title col-12"><span class="text-muted"><strong>{{ cat.priority_display }}</strong></span> {{ cat }}</h3>
-        {% for entry in entries %}
-        <div class="card mb-4">
-            <div class="card-header py-1 px-3 text-wide text-muted text-bold">{{ entry.kpi.priority_display }}. {{ entry.kpi.name }}</div>
-            <div class="list-group list-group-flush">
-                    <div class="p-2 list-group-item list-group-item-action list-group-item-default">
-                        <div class="d-flex flex-row">
-                            <div class="pl-3 pt-2 text-muted align-self-center">
-                                <div>
-                                    {{ entry.kpi.description|linebreaksbr }}
-                                </div>
-                            </div>
-                        </div>
-                        <hr class="mx-3" />
-                        <div class="d-flex flex-row">
-                            <div class="box-status text-center align-middle">
-                                <span class="text-large">{{ entry.value|default_if_none:"-" }}</span>
-                            </div>
-                            <div class="pl-3 align-self-center">
-                                <div class="m-0">
-                                    {% if entry.comments %}<strong>{{ entry.comments|linebreaksbr }}</strong>{% else %}<em>No additional comments</em>{% endif %}
-                                </div>
-                            </div>
-                            <div class="tools-box ml-auto">
-                                <a href="#!"  data-form-link="{% url "kpientry-edit" entry.pk %}" title="Edit this information">
-                                    {% show_icon label='Edit' icon='ti ti-md ti-pencil' color='info' %}
-                                </a>
-                            </div>
-                        </div>
-                    </div>
+        <section>
+        <h3 class="col-12 section-title {% if not forloop.first %}mt-5{% endif %}">{{ cat }}</h3>
+        <div class="section-entry col-12 jumbotron pt-4 pb-2 text-muted">
+            <div class="description">
+                <p><span class="text-bold text-large text-condensed">STRATEGIC GOAL:</span></p>
+                <p>{{ cat.description|linebreaksbr }}</p>
             </div>
         </div>
-            {% endfor %}
+
+        {% for entry in entries %}
+            <div class="section-entry col-12 px-5 text-condensed">
+                <div class="description">
+                    <h4>{{ entry.kpi.priority_display }}. {{ entry.kpi.name }}</h4>
+                    <p>{{ entry.kpi.description|linebreaksbr }}</p>
+                </div>
+            </div>
+            <div class="section-entry col-12 px-5">
+                <div class="notes">
+                    <div class="d-flex flex-row">
+                        <div class="box-status text-center pt-2">
+                            <span class="text-large">{{ entry.value|default_if_none:"-" }}</span>
+                        </div>
+                        <div class="pl-3 align-self-center">
+                            <div class="m-0">
+                                {% if entry.comments %}<strong>{{ entry.comments|linebreaksbr }}</strong>{% else %}<em>No additional comments</em>{% endif %}
+                            </div>
+                        </div>
+                        {% if owner %}
+                        <div class="tools-box ml-auto">
+                            <a href="#!"  data-form-link="{% url "kpientry-edit" entry.pk %}" title="Edit this information">
+                                {% show_icon label='Edit' icon='ti ti-md ti-pencil' color='info' %}
+                            </a>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        {% endfor %}
+        </section>
     {% empty %}
         <div class="card mb-4">
             <div class="list-group list-group-flush">

@@ -1,11 +1,16 @@
 from django import forms
+from django.forms import ValidationError
 from django.urls import reverse_lazy
+from django.utils import timezone
+from django.utils.translation import ugettext as _
 
 from crispy_forms.bootstrap import StrictButton
 from crispy_forms.helper import FormHelper
 from crispy_forms.layout import HTML, Div, Field, Layout
 
-from .models import KPI, KPIEntry
+from .models import KPI, KPIEntry, KPICategory
+
+import calendar
 
 
 class BodyHelper(FormHelper):
@@ -64,8 +69,8 @@ class KPIForm(forms.ModelForm):
 
 
 class BeamlineMonthForm(forms.ModelForm):
-    month = forms.IntegerField(min_value=1, max_value=12)
-    year = forms.IntegerField(min_value=1969, max_value=3000)
+    month = forms.ChoiceField(choices=[(i, calendar.month_name[i]) for i in range(1,13)], initial=timezone.now().month)
+    year = forms.IntegerField(initial=timezone.now().year)
 
     class Meta:
         model = KPIEntry
@@ -92,6 +97,13 @@ class BeamlineMonthForm(forms.ModelForm):
             StrictButton('Save', type='submit', name="submit", value='save', css_class='btn btn-primary'),
         )
 
+    def clean_month(self):
+        try:
+            month =int(self.cleaned_data['month'])
+        except:
+            raise ValidationError(_('Invalid value: %(month)s'), code='invalid', params={'month': self.cleaned_data['month']})
+        return month
+
 
 class KPIEntryForm(forms.ModelForm):
 
@@ -99,7 +111,7 @@ class KPIEntryForm(forms.ModelForm):
         model = KPIEntry
         fields = ['value', 'comments']
         widgets = {
-            'comments': forms.Textarea(attrs={"cols": 54, "rows": 4}),
+            'comments': forms.Textarea(attrs={"rows": 4}),
         }
 
     def __init__(self, *args, **kwargs):
@@ -114,7 +126,41 @@ class KPIEntryForm(forms.ModelForm):
             Div(
                 Div('value', css_class="col-3"),
                 HTML("<div class='col-9 mt-4'>{}</div>".format(self.instance.kpi.description)),
-                Div('comments', css_class="col-12"),
+                Div('comments', css_class="col-12 w-100"),
+                css_class="row"
+            ),
+        )
+        self.footer.layout = Layout(
+            StrictButton('Revert', type='reset', value='Reset', css_class="btn btn-secondary"),
+            StrictButton('Save', type='submit', name="submit", value='save', css_class='btn btn-primary'),
+        )
+
+
+class KPICategoryForm(forms.ModelForm):
+
+    class Meta:
+        model = KPICategory
+        fields = ['name', 'description', 'priority']
+        widgets = {
+            'description': forms.Textarea(attrs={"cols": 54, "rows": 4}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        self.body = BodyHelper(self)
+        self.footer = FooterHelper(self)
+        if self.instance.pk:
+            self.body.title = u"{}".format(self.instance.name)
+            self.body.form_action = reverse_lazy('category-edit', kwargs={'pk': self.instance.pk})
+        else:
+            self.body.title = u"New KPI Category"
+            self.body.form_action = reverse_lazy('new-category')
+        self.body.layout = Layout(
+            Div(
+                Div('priority', css_class="col-2"),
+                Div('name', css_class="col-10"),
+                Div('description', css_class="col-12 w-100"),
                 css_class="row"
             ),
         )

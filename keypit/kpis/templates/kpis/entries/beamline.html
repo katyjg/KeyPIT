@@ -6,7 +6,7 @@
 {% block page_heading %}
     <h3 class="text-condensed">
         <i class="text-muted fa fa-fw {% if object.is_editable %}fa-unlock{% else %}fa-lock{% endif %}"></i>
-        <span class="text-muted">{% if user.is_superuser %}{{ object.acronym|upper }} | {% endif %}</span>
+        <span class="text-muted">{{ object.acronym|upper }} | </span>
         <strong>{% if year %}{{ year }}{% else %}{{ object.name }}{% endif %}</strong>
     </h3>
     <span class="text-muted">
@@ -15,10 +15,10 @@
 {% endblock %}
 
 {% block object_tools %}
-    {% if user.is_superuser %}
-        <a href="#!0" data-form-link="{% url "new-month" object.pk %}">
-            {% show_icon label='New Report' icon='ti ti-md ti-plus' %}
-        </a>
+    {% if owner %}
+    <a href="#!0" data-form-link="{% url "new-month" object.pk %}">
+        {% show_icon label='New Report' icon='ti ti-md ti-plus' %}
+    </a>
     {% endif %}
 {% endblock %}
 

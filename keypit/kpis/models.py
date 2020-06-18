@@ -1,13 +1,39 @@
 from django.db import models
+from django.conf import settings
 from django.contrib.auth.models import AbstractUser
+from django.dispatch import receiver
 from django.utils.translation import ugettext as _
 
+from django_cas_ng.signals import cas_user_authenticated
+
 from model_utils import Choices
+import requests
 import string
+
+import logging
+logger = logging.getLogger(__name__)
 
 
 class Manager(AbstractUser):
     name = models.SlugField()
+    user_roles = models.TextField(blank=True, null=True)
+
+    def roles(self):
+        return self.user_roles and self.user_roles.split(',') or []
+
+
+@receiver(cas_user_authenticated)
+def update_user_roleperms(sender, **kwargs):
+    token = getattr(settings, 'PEOPLE_TOKEN', 'no token')
+    auth_header = {'Authorization': 'Bearer {token}'.format(token=token)}
+    if kwargs.get('created'):
+        logger.info("New account {} created".format(kwargs.get('username')))
+
+    r = requests.get('https://people.lightsource.ca/api/v2/people/{}/roles'.format(kwargs.get('username')), headers=auth_header)
+    if r.status_code == 200:
+        roles = [d.get('code') for d in r.json()]
+        logger.info(roles)
+        Manager.objects.filter(username=kwargs.get('username')).update(user_roles=','.join(['<{}>'.format(role) for role in roles]))
 
 
 class Department(models.Model):
@@ -39,7 +65,7 @@ class Beamline(models.Model):
 
 class KPICategory(models.Model):
     name = models.CharField(max_length=250)
-    description = models.CharField(max_length=600, blank=True)
+    description = models.CharField(verbose_name="Strategic Goal", max_length=600, blank=True)
     priority = models.IntegerField(default=0)
 
     def __str__(self):
@@ -50,8 +76,8 @@ class KPICategory(models.Model):
         return "{}".format(number + 1)
 
     class Meta:
-        verbose_name = "KPI Category"
-        verbose_name_plural = "KPI Categories"
+        verbose_name = "Category"
+        verbose_name_plural = "Categories"
         ordering = ['priority',]
 
 

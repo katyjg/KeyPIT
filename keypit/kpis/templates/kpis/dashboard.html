@@ -11,11 +11,9 @@
 {% endblock %}
 
 {% block object_tools %}
-    {% if user.is_superuser %}
-        <a href="{% url "kpi-list" %}">
-            {% show_icon label='KPIs' icon='ti ti-md ti-key' %}
-        </a>
-    {% endif %}
+    <a href="{% url "kpi-list" %}">
+        {% show_icon label='KPIs' icon='ti ti-md ti-key' %}
+    </a>
 {% endblock %}
 
 {% block object_status %}

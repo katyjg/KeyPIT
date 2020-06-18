@@ -4,10 +4,11 @@
 
 {% block extra_css %}
     <link href="{% static "css/c3.min.css" %}" rel="stylesheet">
-    <link href="{% static "css/reports.min.css" %}" rel="stylesheet">
+    {{ block.super }}
 {% endblock %}
 
 {% block extra_js %}
+    {{ block.super }}
     <script type="text/javascript" src="{% static "js/d3/d3.v5.min.js" %}"></script>
     <script type="text/javascript" src="{% static "js/d3/d3.legend.js" %}"></script>
     <script type="text/javascript" src="{% static "js/misc/showdown.min.js" %}"></script>

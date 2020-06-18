@@ -26,12 +26,18 @@ class Command(BaseCommand):
 
     def add_arguments(self, parser):
         parser.add_argument('--date', type=str)
+        parser.add_argument('--month', type=int)
+        parser.add_argument('--year', type=int)
 
     def handle(self, *args, **options):
-        strdt = options.get('date', None)
-        dt = strdt and datetime.strptime(strdt, '%Y-%m-%d') or timezone.now() - timedelta(days=1)
+        if options.get('date'):
+            dt = datetime.strptime(options.get('date'), '%Y-%m-%d')
+        elif options.get('year'):
+            dt = datetime(options.get('year'), options.get('month', 1), 1)
+        else:
+            dt = timezone.now() - timedelta(days=1)
         start = timezone.datetime(dt.year, dt.month, 1)
-        end = timezone.datetime(dt.year, dt.month + 1, 1)
+        end = timezone.datetime(dt.month == 12 and dt.year + 1 or dt.year, dt.month == 12 and 1 or dt.month + 1, 1)
         qstart = datetime.strftime(start, '%Y-%m-%d')
         qend = datetime.strftime(end, '%Y-%m-%d')
 

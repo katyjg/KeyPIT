@@ -5,7 +5,7 @@
 {% block page_heading %}
     <h3 class="text-condensed">
         <i class="text-muted fa fa-fw {% if object.is_editable %}fa-unlock{% else %}fa-lock{% endif %}"></i>
-        <span class="text-muted">{% if user.is_superuser %}{{ object.acronym|upper }} | {% endif %}</span><strong>{{ object.name }}</strong>
+        <span class="text-muted">{{ object.acronym|upper }} | </span><strong>{{ object.name }}</strong>
     </h3>
     <span class="text-muted">
         <strong>{{ object.beamlines.count }}</strong> Beamline{{ object.beamlines.count|pluralize }}

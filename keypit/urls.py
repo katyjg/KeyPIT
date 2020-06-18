@@ -28,10 +28,22 @@ urlpatterns = [
     url(r'^$', login_required(Dashboard.as_view()), {}, 'dashboard'),
     path('admin/', admin.site.urls),
     path('keypit/',  include('keypit.kpis.urls')),
-
-    path('accounts/login/', LoginView.as_view(template_name='login.html'), name="login"),
-    path('accounts/logout/', LogoutView.as_view(), name="logout"),
 ]
+
+if settings.CAS_ENABLED:
+    from django_cas_ng import views as casviews
+
+    urlpatterns += [
+        path('accounts/login/', casviews.LoginView.as_view(), name='cas_ng_login'),
+        path('accounts/logout/', casviews.LogoutView.as_view(), name='logout'),
+        path('accounts/callback/', casviews.CallbackView.as_view(), name='cas_ng_proxy_callback'),
+
+    ]
+else:
+    urlpatterns += [
+        path('accounts/login/', LoginView.as_view(template_name='login.html'), name="login"),
+        path('accounts/logout/', LogoutView.as_view(), name="logout"),
+    ]
 
 if settings.DEBUG:
     import debug_toolbar
