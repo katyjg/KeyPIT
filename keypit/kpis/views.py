@@ -5,7 +5,6 @@ from django.template.defaultfilters import linebreaksbr
 from django.urls import reverse_lazy
 from django.views.generic import edit, detail, View
 
-
 from itemlist.views import ItemListView
 from datetime import datetime
 
@@ -13,17 +12,14 @@ from keypit.kpis import models, forms, stats
 from keypit.kpis.mixins import OwnerRequiredMixin, AdminRequiredMixin, ReportViewMixin, AsyncFormMixin, ListViewMixin, UserRoleMixin
 
 
+def format_description(val, record):
+    return linebreaksbr(val)
+
+
 class Dashboard(LoginRequiredMixin, ReportViewMixin, detail.DetailView):
     """
-    This is the "Dashboard" view. Basic information about the Project is displayed:
-
-    :For superusers, direct to staff.html, with context:
-       - shipments: Any Shipments that are Sent or On-site
-       - automounters: Any active Dewar objects (Beamline/Automounter)
-
-    :For Users, direct to project.html, with context:
-       - shipments: All Shipments that are Draft, Sent, or On-site, plus Returned shipments to bring the total displayed up to seven.
-       - sessions: Any recent Session from any beamline
+    This is the "Dashboard" view. Unfiltered KPI data is displayed
+    # TODO: Direct users to appropriate data level, based on their roles
     """
     model = models.Manager
     template_name = "kpis/dashboard.html"
@@ -50,7 +46,9 @@ class DepartmentList(UserRoleMixin, ListViewMixin, ItemListView):
     list_columns = ['acronym', 'name']
     list_search = ['name', 'acronym']
     link_url = 'department-detail'
+    add_url = 'new-department'
     link_data = False
+    tool_template = 'kpis/components/kpi-list-tools.html'
     #ordering = ['status', '-modified']
     paginate_by = 25
 
@@ -63,13 +61,31 @@ class DepartmentDetail(UserRoleMixin, ReportViewMixin, detail.DetailView):
         return {'beamline__department': self.object}
 
 
+class DepartmentCreate(AdminRequiredMixin, SuccessMessageMixin, AsyncFormMixin, edit.CreateView):
+    form_class = forms.DepartmentForm
+    template_name = "modal/form.html"
+    model = models.Department
+    success_url = reverse_lazy('department-list')
+    success_message = "Department has been created"
+
+
+class DepartmentEdit(AdminRequiredMixin, SuccessMessageMixin, AsyncFormMixin, edit.UpdateView):
+    form_class = forms.DepartmentForm
+    template_name = "modal/form.html"
+    model = models.Department
+    success_url = reverse_lazy('department-list')
+    success_message = "Department has been updated"
+
+
 class BeamlineList(UserRoleMixin, ListViewMixin, ItemListView):
     model = models.Beamline
     list_filters = ['department',]
-    list_columns = ['id', 'name']
+    list_columns = ['acronym', 'name', 'department']
     list_search = ['name', 'acronym']
     link_url = 'beamline-detail'
+    add_url = 'new-beamline'
     link_data = False
+    tool_template = 'kpis/components/kpi-list-tools.html'
     ordering = ['department',]
     paginate_by = 25
 
@@ -86,9 +102,21 @@ class BeamlineDetail(UserRoleMixin, ReportViewMixin, detail.DetailView):
         return {'beamline': self.object}
 
 
-def format_description(val, record):
-    return linebreaksbr(val)
+class BeamlineCreate(AdminRequiredMixin, SuccessMessageMixin, AsyncFormMixin, edit.CreateView):
+    form_class = forms.BeamlineForm
+    template_name = "modal/form.html"
+    model = models.Beamline
+    success_url = reverse_lazy('beamline-list')
+    success_message = "Beamline has been created"
 
+
+class BeamlineEdit(AdminRequiredMixin, SuccessMessageMixin, AsyncFormMixin, edit.UpdateView):
+    form_class = forms.BeamlineForm
+    template_name = "modal/form.html"
+    model = models.Beamline
+    success_url = reverse_lazy('beamline-list')
+    success_message = "Beamline has been updated"
+    
 
 class BeamlineMonth(UserRoleMixin, detail.DetailView):
     model = models.Beamline
@@ -150,6 +178,18 @@ class BeamlineMonthCreate(OwnerRequiredMixin, SuccessMessageMixin, AsyncFormMixi
         return JsonResponse({'url': self.get_success_url()}, safe=False)
 
 
+class BeamlineKPIEntryCreate(BeamlineMonth):
+
+    def get_context_data(self, **kwargs):
+        beamline = models.Beamline.objects.get(pk=self.kwargs.get('pk'))
+        month = datetime(self.kwargs.get('year'), self.kwargs.get('month'), 1).date()
+        for kpi in models.KPI.objects.all():
+            models.KPIEntry.objects.get_or_create(beamline=beamline, month=month, kpi=kpi)
+
+        context = super().get_context_data(**kwargs)
+        return context
+
+
 class KPIList(UserRoleMixin, ListViewMixin, ItemListView):
     model = models.KPI
     list_filters = ['category', 'kind']
@@ -164,22 +204,6 @@ class KPIList(UserRoleMixin, ListViewMixin, ItemListView):
     paginate_by = 25
 
 
-class KPICreate(AdminRequiredMixin, SuccessMessageMixin, AsyncFormMixin, edit.CreateView):
-    form_class = forms.KPIForm
-    template_name = "modal/form.html"
-    model = models.KPI
-    success_url = reverse_lazy('dashboard')
-    success_message = "KPI has been created"
-
-
-class KPIEdit(AdminRequiredMixin, SuccessMessageMixin, AsyncFormMixin, edit.UpdateView):
-    form_class = forms.KPIForm
-    template_name = "modal/form.html"
-    model = models.KPI
-    success_url = reverse_lazy('dashboard')
-    success_message = "KPI has been updated"
-
-
 class KPIDetail(UserRoleMixin, ReportViewMixin, detail.DetailView):
     model = models.KPI
     template_name = "kpis/entries/kpi.html"
@@ -188,29 +212,20 @@ class KPIDetail(UserRoleMixin, ReportViewMixin, detail.DetailView):
         return {'kpi': self.object}
 
 
-class KPIEntryCreate(BeamlineMonth):
-
-    def get_context_data(self, **kwargs):
-        beamline = models.Beamline.objects.get(pk=self.kwargs.get('pk'))
-        month = datetime(self.kwargs.get('year'), self.kwargs.get('month'), 1).date()
-        for kpi in models.KPI.objects.all():
-            models.KPIEntry.objects.get_or_create(beamline=beamline, month=month, kpi=kpi)
-
-        context = super().get_context_data(**kwargs)
-        return context
-
-
-class KPIEntryEdit(AdminRequiredMixin, SuccessMessageMixin, AsyncFormMixin, edit.UpdateView):
-    form_class = forms.KPIEntryForm
+class KPICreate(AdminRequiredMixin, SuccessMessageMixin, AsyncFormMixin, edit.CreateView):
+    form_class = forms.KPIForm
     template_name = "modal/form.html"
-    model = models.KPIEntry
-    success_url = reverse_lazy('dashboard')
-    success_message = "KPI information has been updated"
+    model = models.KPI
+    success_url = reverse_lazy('kpi-list')
+    success_message = "KPI has been created"
 
-    def get_success_url(self):
-        success_url = reverse_lazy('beamline-month', kwargs={'pk': self.object.beamline.pk, 'year': self.object.month.year,
-                                           'month': self.object.month.month})
-        return success_url
+
+class KPIEdit(AdminRequiredMixin, SuccessMessageMixin, AsyncFormMixin, edit.UpdateView):
+    form_class = forms.KPIForm
+    template_name = "modal/form.html"
+    model = models.KPI
+    success_url = reverse_lazy('kpi-list')
+    success_message = "KPI has been updated"
 
 
 class KPICategoryList(UserRoleMixin, ListViewMixin, ItemListView):
@@ -245,5 +260,15 @@ class KPICategoryEdit(AdminRequiredMixin, SuccessMessageMixin, AsyncFormMixin, e
     success_message = "Category has been updated"
 
 
+class KPIEntryEdit(AdminRequiredMixin, SuccessMessageMixin, AsyncFormMixin, edit.UpdateView):
+    form_class = forms.KPIEntryForm
+    template_name = "modal/form.html"
+    model = models.KPIEntry
+    success_url = reverse_lazy('dashboard')
+    success_message = "KPI information has been updated"
 
+    def get_success_url(self):
+        success_url = reverse_lazy('beamline-month', kwargs={'pk': self.object.beamline.pk, 'year': self.object.month.year,
+                                           'month': self.object.month.month})
+        return success_url
 

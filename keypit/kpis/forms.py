@@ -8,7 +8,7 @@ from crispy_forms.bootstrap import StrictButton
 from crispy_forms.helper import FormHelper
 from crispy_forms.layout import HTML, Div, Field, Layout
 
-from .models import KPI, KPIEntry, KPICategory
+from .models import KPI, KPIEntry, KPICategory, Department, Beamline
 
 import calendar
 
@@ -27,6 +27,67 @@ class FooterHelper(FormHelper):
         self.form_tag = False
         self.disable_csrf = True
         self.form_show_errors = False
+
+
+class DepartmentForm(forms.ModelForm):
+
+    class Meta:
+        model = Department
+        fields = ['name', 'acronym']
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        self.body = BodyHelper(self)
+        self.footer = FooterHelper(self)
+        if self.instance.pk:
+            self.body.title = u"{}".format(self.instance.name)
+            self.body.form_action = reverse_lazy('department-edit', kwargs={'pk': self.instance.pk})
+        else:
+            self.body.title = u"New Department"
+            self.body.form_action = reverse_lazy('new-department')
+        self.body.layout = Layout(
+            Div(
+                Div('name', css_class="col-12"),
+                Div('acronym', css_class="col-12"),
+                css_class="row"
+            ),
+        )
+        self.footer.layout = Layout(
+            StrictButton('Revert', type='reset', value='Reset', css_class="btn btn-secondary"),
+            StrictButton('Save', type='submit', name="submit", value='save', css_class='btn btn-primary'),
+        )
+
+
+class BeamlineForm(forms.ModelForm):
+
+    class Meta:
+        model = Beamline
+        fields = ['name', 'acronym', 'department']
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        self.body = BodyHelper(self)
+        self.footer = FooterHelper(self)
+        if self.instance.pk:
+            self.body.title = u"{}".format(self.instance.name)
+            self.body.form_action = reverse_lazy('beamline-edit', kwargs={'pk': self.instance.pk})
+        else:
+            self.body.title = u"New Beamline"
+            self.body.form_action = reverse_lazy('new-beamline')
+        self.body.layout = Layout(
+            Div(
+                Div('name', css_class="col-12"),
+                Div('acronym', css_class="col-6"),
+                Div('department', css_class="col-6"),
+                css_class="row"
+            ),
+        )
+        self.footer.layout = Layout(
+            StrictButton('Revert', type='reset', value='Reset', css_class="btn btn-secondary"),
+            StrictButton('Save', type='submit', name="submit", value='save', css_class='btn btn-primary'),
+        )
 
 
 class KPIForm(forms.ModelForm):

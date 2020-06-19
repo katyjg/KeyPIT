@@ -35,9 +35,11 @@
 {% endblock %}
 
 {% block object_tools %}
+    {% if admin %}
     <a href="#!" data-form-link="{% url 'kpi-edit' object.pk %}">
         {% show_icon label='Edit' icon='ti ti-md ti-pencil-alt' %}
     </a>
+    {% endif %}
 {% endblock %}
 
 {% block extra_js %}

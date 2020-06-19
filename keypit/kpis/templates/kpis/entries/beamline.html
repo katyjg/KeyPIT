@@ -16,9 +16,12 @@
 
 {% block object_tools %}
     {% if owner %}
-    <a href="#!0" data-form-link="{% url "new-month" object.pk %}">
-        {% show_icon label='New Report' icon='ti ti-md ti-plus' %}
-    </a>
+        <a href="#!" data-form-link="{% url 'beamline-edit' object.pk %}">
+            {% show_icon label='Edit' icon='ti ti-md ti-pencil-alt' %}
+        </a>
+        <a href="#!0" data-form-link="{% url "new-month" object.pk %}">
+            {% show_icon label='New Report' icon='ti ti-md ti-plus' %}
+        </a>
     {% endif %}
 {% endblock %}
 

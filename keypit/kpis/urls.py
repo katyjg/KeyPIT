@@ -8,12 +8,17 @@ urlpatterns = [
     path('departments/', views.DepartmentList.as_view(), name='department-list'),
     path('departments/<int:pk>/', views.DepartmentDetail.as_view(), name='department-detail'),
     path('departments/<int:pk>/<int:year>/', views.DepartmentDetail.as_view(), name='department-year'),
+    path('departments/new/', views.DepartmentCreate.as_view(), name='new-department'),
+    path('departments/<int:pk>/edit/', views.DepartmentEdit.as_view(), name='department-edit'),
+
     path('beamlines/', views.BeamlineList.as_view(), name='beamline-list'),
     path('beamlines/<int:pk>/', views.BeamlineDetail.as_view(), name='beamline-detail'),
     path('beamlines/<int:pk>/new-month/', views.BeamlineMonthCreate.as_view(), name='new-month'),
     path('beamlines/<int:pk>/<int:year>/', views.BeamlineDetail.as_view(), name='beamline-year'),
     path('beamlines/<int:pk>/<int:year>/<int:month>/', views.BeamlineMonth.as_view(), name='beamline-month'),
-    path('beamlines/<int:pk>/<int:year>/<int:month>/new/', views.KPIEntryCreate.as_view(), name='new-beamline-month'),
+    path('beamlines/<int:pk>/<int:year>/<int:month>/new/', views.BeamlineKPIEntryCreate.as_view(), name='new-beamline-month'),
+    path('beamlines/new/', views.BeamlineCreate.as_view(), name='new-beamline'),
+    path('beamlines/<int:pk>/edit/', views.BeamlineEdit.as_view(), name='beamline-edit'),
 
     path('categories/', views.KPICategoryList.as_view(), name='category-list'),
     path('categories/new/', views.KPICategoryCreate.as_view(), name='new-category'),
