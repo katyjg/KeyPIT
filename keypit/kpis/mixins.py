@@ -6,24 +6,31 @@ from keypit.kpis import stats
 
 class UserRoleMixin(LoginRequiredMixin):
 
-    def owner_roles(self):
+    def admin_roles(self):
         return []
 
-    def admin_roles(self):
-        return ['science-manager:escience', 'science-manager:bioscience', 'science-manager:matscience']
+    def owner_roles(self):
+        return []
 
     def employee_roles(self):
         return ['employee']
 
+    def is_admin(self):
+        return any(['<{}>'.format(r) in self.request.user.roles() for r in
+                    self.admin_roles()]) or self.request.user.is_superuser
+
+    def is_owner(self):
+        return any(['<{}>'.format(r) in self.request.user.roles() for r in self.owner_roles()]) or self.is_admin()
+
+    def is_employee(self):
+        return any(['<{}>'.format(r) in self.request.user.roles() for r in self.employee_roles()]) or self.is_owner()
+
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
 
-        context['admin'] = any(['<{}>'.format(r) in self.request.user.roles()
-                                for r in self.admin_roles()]) or self.request.user.is_superuser
-        context['owner'] = any(['<{}>'.format(r) in self.request.user.roles()
-                                for r in self.owner_roles()]) or context['admin']
-        context['employee'] = any(['<{}>'.format(r) in self.request.user.roles()
-                                   for r in self.employee_roles()]) or context['owner']
+        context['admin'] = self.is_admin()
+        context['owner'] = self.is_owner()
+        context['employee'] = self.is_employee()
         return context
 
 
@@ -34,19 +41,17 @@ class AdminRequiredMixin(UserRoleMixin, UserPassesTestMixin):
     """
 
     def test_func(self):
-        return any(['<{}>'.format(r) in self.request.user.roles()
-                                for r in self.admin_roles()]) or self.request.user.is_superuser
+        return self.is_admin()
 
 
 class OwnerRequiredMixin(UserRoleMixin, UserPassesTestMixin):
     """
-    Mixin to allow access through a view only if the user is an employee
+    Mixin to allow access through a view only if the user is an owner as defined by owner_roles
     Can be used with any View.
     """
 
     def test_func(self):
-        return any(['<{}>'.format(r) in self.request.user.roles()
-                                for r in self.owner_roles()])
+        return self.is_owner()
 
 
 class EmployeeRequiredMixin(UserRoleMixin, UserPassesTestMixin):
@@ -56,8 +61,7 @@ class EmployeeRequiredMixin(UserRoleMixin, UserPassesTestMixin):
     """
 
     def test_func(self):
-        return any(['<{}>'.format(r) in self.request.user.roles()
-                                for r in self.employee_roles()])
+        return self.is_employee()
 
 
 class ReportViewMixin(object):
@@ -74,15 +78,19 @@ class ReportViewMixin(object):
         report_ctx['years'] = stats.get_data_periods(period='year', **filters)
 
         if year:
-            period = 'month'
             filters.update({'month__year': year})
             report_ctx['year'] = year
-            report_ctx['months'] = stats.get_data_periods(period=period, **filters)
-            report_ctx['report'] = stats.beamline_stats(period=period, year=year, **filters)
+            for period in ['month', 'quarter']:
+                report_ctx['{}s'.format(period)] = stats.get_data_periods(period=period, **filters)
+            if self.kwargs.get('quarter'):
+                report_ctx['quarter'] = self.kwargs.get('quarter')
+                filters.update({'month__quarter': self.kwargs.get('quarter')})
+            report_ctx['report'] = stats.beamline_stats(period='month', year=year, **filters)
         else:
             report_ctx['report'] = stats.beamline_stats(period='year', **filters)
 
         return report_ctx
+
 
 class ListViewMixin(LoginRequiredMixin):
     paginate_by = 25

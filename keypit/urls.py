@@ -34,7 +34,7 @@ if settings.CAS_ENABLED:
     from django_cas_ng import views as casviews
 
     urlpatterns += [
-        path('accounts/login/', casviews.LoginView.as_view(), name='cas_ng_login'),
+        path('accounts/login/', casviews.LoginView.as_view(), name='login'),
         path('accounts/logout/', casviews.LogoutView.as_view(), name='logout'),
         path('accounts/callback/', casviews.CallbackView.as_view(), name='cas_ng_proxy_callback'),
 

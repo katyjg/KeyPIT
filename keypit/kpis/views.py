@@ -102,28 +102,18 @@ class BeamlineDetail(UserRoleMixin, ReportViewMixin, detail.DetailView):
         return {'beamline': self.object}
 
 
-class BeamlineCreate(AdminRequiredMixin, SuccessMessageMixin, AsyncFormMixin, edit.CreateView):
-    form_class = forms.BeamlineForm
-    template_name = "modal/form.html"
-    model = models.Beamline
-    success_url = reverse_lazy('beamline-list')
-    success_message = "Beamline has been created"
+class BeamlineQuarter(BeamlineDetail):
 
+    def get_filters(self):
+        return {'beamline': self.object}
 
-class BeamlineEdit(AdminRequiredMixin, SuccessMessageMixin, AsyncFormMixin, edit.UpdateView):
-    form_class = forms.BeamlineForm
-    template_name = "modal/form.html"
-    model = models.Beamline
-    success_url = reverse_lazy('beamline-list')
-    success_message = "Beamline has been updated"
-    
 
 class BeamlineMonth(UserRoleMixin, detail.DetailView):
     model = models.Beamline
     template_name = "kpis/entries/beamline-month.html"
 
     def owner_roles(self):
-        return ['{}:'.format(r) + self.get_object().acronym.lower() for r in
+        return ['{}:{}'.format(r, self.get_object().acronym.lower()) for r in
                 ['beamline-admin', 'beamline-responsible', 'beamline-staff']]
 
     def get_context_data(self, **kwargs):
@@ -142,13 +132,34 @@ class BeamlineMonth(UserRoleMixin, detail.DetailView):
         filters = {'month__year': year}
         context['years'] = stats.get_data_periods(period='year')
         context['months'] = stats.get_data_periods(period='month', **filters)
+        context['quarters'] = stats.get_data_periods(period='quarter', **filters)
         context['year'] = year
         context['month'] = month
 
         return context
 
 
-class BeamlineMonthCreate(OwnerRequiredMixin, SuccessMessageMixin, AsyncFormMixin, edit.CreateView):
+class BeamlineCreate(AdminRequiredMixin, SuccessMessageMixin, AsyncFormMixin, edit.CreateView):
+    form_class = forms.BeamlineForm
+    template_name = "modal/form.html"
+    model = models.Beamline
+    success_url = reverse_lazy('beamline-list')
+    success_message = "Beamline has been created"
+
+
+class BeamlineEdit(OwnerRequiredMixin, SuccessMessageMixin, AsyncFormMixin, edit.UpdateView):
+    form_class = forms.BeamlineForm
+    template_name = "modal/form.html"
+    model = models.Beamline
+    success_url = reverse_lazy('beamline-list')
+    success_message = "Beamline has been updated"
+
+    def owner_roles(self):
+        return ['{}:{}'.format(r, self.get_object().acronym.lower()) for r in
+                ['beamline-admin', 'beamline-responsible', 'beamline-staff']]
+
+
+class BeamlineCreateMonth(OwnerRequiredMixin, SuccessMessageMixin, AsyncFormMixin, edit.CreateView):
     form_class = forms.BeamlineMonthForm
     template_name = "modal/form.html"
     model = models.KPIEntry
@@ -178,16 +189,14 @@ class BeamlineMonthCreate(OwnerRequiredMixin, SuccessMessageMixin, AsyncFormMixi
         return JsonResponse({'url': self.get_success_url()}, safe=False)
 
 
-class BeamlineKPIEntryCreate(BeamlineMonth):
+class BeamlineCreateThisMonth(BeamlineCreateMonth):
 
-    def get_context_data(self, **kwargs):
-        beamline = models.Beamline.objects.get(pk=self.kwargs.get('pk'))
-        month = datetime(self.kwargs.get('year'), self.kwargs.get('month'), 1).date()
-        for kpi in models.KPI.objects.all():
-            models.KPIEntry.objects.get_or_create(beamline=beamline, month=month, kpi=kpi)
-
-        context = super().get_context_data(**kwargs)
-        return context
+    def get_initial(self):
+        initial = super().get_initial()
+        initial['beamline'] = models.Beamline.objects.get(pk=self.kwargs.get('pk'))
+        initial['year'] = self.kwargs.get('year')
+        initial['month'] = self.kwargs.get('month')
+        return initial
 
 
 class KPIList(UserRoleMixin, ListViewMixin, ItemListView):
@@ -260,7 +269,7 @@ class KPICategoryEdit(AdminRequiredMixin, SuccessMessageMixin, AsyncFormMixin, e
     success_message = "Category has been updated"
 
 
-class KPIEntryEdit(AdminRequiredMixin, SuccessMessageMixin, AsyncFormMixin, edit.UpdateView):
+class KPIEntryEdit(OwnerRequiredMixin, SuccessMessageMixin, AsyncFormMixin, edit.UpdateView):
     form_class = forms.KPIEntryForm
     template_name = "modal/form.html"
     model = models.KPIEntry
@@ -269,6 +278,9 @@ class KPIEntryEdit(AdminRequiredMixin, SuccessMessageMixin, AsyncFormMixin, edit
 
     def get_success_url(self):
         success_url = reverse_lazy('beamline-month', kwargs={'pk': self.object.beamline.pk, 'year': self.object.month.year,
-                                           'month': self.object.month.month})
+                                           'month': self.object.month.month})[:-1] + '#{}'.format(self.object.kpi.name)
         return success_url
 
+    def owner_roles(self):
+        return ['{}:{}'.format(r, self.get_object().beamline.acronym.lower()) for r in
+                ['beamline-admin', 'beamline-responsible', 'beamline-staff']]

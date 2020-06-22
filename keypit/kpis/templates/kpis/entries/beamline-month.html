@@ -1,57 +1,7 @@
-{% extends "base.html" %}
+{% extends "kpis/entries/beamline.html" %}
 
-{% load static %}
 {% load icons %}
 {% load date_tags %}
-
-{% block object_tools %}
-    {% if owner %}
-        <a href="#!0" data-form-link="{% url "new-month" object.pk %}">
-            {% show_icon label='New Report' icon='ti ti-md ti-plus' %}
-        </a>
-    {% endif %}
-{% endblock %}
-
-{% block page_heading %}
-    <h3 class="text-condensed">
-        <span class="text-muted">{{ object.acronym|upper }} | </span><strong>{{ month|month_name }} {{ year }}</strong>
-    </h3>
-    <span class="text-muted">
-        <strong>1</strong> of <strong>{{ object.department.beamlines.count }}</strong> Beamline{{ object.department.beamlines.count|pluralize }} in {{ object.department }}
-    </span>
-{% endblock %}
-
-{% block object_status %}
-    <div class="status-bar hidden-print">
-        <div class="row">
-            <div class="col-1">
-                <h5 class="my-0 p-2">
-                    <a href="{% url "beamline-detail" object.pk %}"><span class="badge badge-{% if year %}info{% else %}primary{% endif %}">&emsp;All&emsp;</span></a>&nbsp;
-                </h5>
-            </div>
-            {% if years %}
-                <div class="col-4">
-                    <h5 class="my-0 p-2">
-                    <span class="text-normal text-condensed text-muted">Year: </span>
-                    {% for yr in years %}
-                        <a href="{% url "beamline-year" object.pk yr %}"><span class="badge badge-{% if yr == year %}primary{% else %}info{% endif %}">{{ yr }}</span></a>
-                    {% endfor %}
-                    </h5>
-                </div>
-            {% endif %}
-            {% if months %}
-                <div class="col-7 text-right">
-                <h5 class="my-0 p-2">
-                    <span class="text-normal text-condensed text-muted">Month: </span>
-                    {% for mt in months %}
-                        <a href="{% url "beamline-month" object.pk year mt %}"><span class="badge badge-{% if mt == month %}primary{% else %}info{% endif %}">{{ mt|month_abbr }}</span></a>
-                    {% endfor %}
-                </h5>
-                </div>
-            {% endif %}
-        </div>
-    </div>
-{% endblock %}
 
 {% block full %}
 <div class="row">
@@ -69,7 +19,7 @@
         {% for entry in entries %}
             <div class="section-entry col-12 px-5 text-condensed">
                 <div class="description">
-                    <h4>{{ entry.kpi.priority_display }}. {{ entry.kpi.name }}</h4>
+                    <h4>{{ entry.kpi.priority_display }}. {{ entry.kpi.name }}</h4><a name="{{ entry.kpi.name }}"></a>
                     <p>{{ entry.kpi.description|linebreaksbr }}</p>
                 </div>
             </div>
@@ -100,7 +50,7 @@
         <div class="card mb-4">
             <div class="list-group list-group-flush">
                 <div class="list-group-item empty p-2">
-                    <a href="{% url "new-beamline-month" beamline.pk year month %}" class="d-flex flex-row">
+                    <a href="#!" data-form-link="{% url "new-this-month" beamline.pk year month %}" class="d-flex flex-row">
                         <div class="box-status">
                             <div class="text-center text-muted">
                                 <div title="Create a New Monthly Report" class="ti ti-md ti-plus"></div>

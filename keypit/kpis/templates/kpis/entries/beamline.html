@@ -5,9 +5,8 @@
 
 {% block page_heading %}
     <h3 class="text-condensed">
-        <i class="text-muted fa fa-fw {% if object.is_editable %}fa-unlock{% else %}fa-lock{% endif %}"></i>
         <span class="text-muted">{{ object.acronym|upper }} | </span>
-        <strong>{% if year %}{{ year }}{% else %}{{ object.name }}{% endif %}</strong>
+        <strong>{% if month %}{{ month|month_name }} {% elif quarter %}Q{{ quarter }} {% endif %}{% if year %}{{ year }}{% else %}{{ object.name }}{% endif %}</strong>
     </h3>
     <span class="text-muted">
         <strong>1</strong> of <strong>{{ object.department.beamlines.count }}</strong> Beamline{{ object.department.beamlines.count|pluralize }} in <a href="{% url 'department-detail' object.department.pk %}">{{ object.department }}</a>
@@ -16,11 +15,11 @@
 
 {% block object_tools %}
     {% if owner %}
-        <a href="#!" data-form-link="{% url 'beamline-edit' object.pk %}">
-            {% show_icon label='Edit' icon='ti ti-md ti-pencil-alt' %}
-        </a>
         <a href="#!0" data-form-link="{% url "new-month" object.pk %}">
             {% show_icon label='New Report' icon='ti ti-md ti-plus' %}
+        </a>
+        <a href="#!" data-form-link="{% url 'beamline-edit' object.pk %}">
+            {% show_icon label='Edit' icon='ti ti-md ti-pencil-alt' %}
         </a>
     {% endif %}
 {% endblock %}
@@ -45,12 +44,22 @@
             {% endif %}
             {% if months %}
                 <div class="col-7 text-right">
-                <h5 class="my-0 p-2">
-                    <span class="text-normal text-condensed text-muted">Month: </span>
-                    {% for mt in months %}
-                        <a href="{% url "beamline-month" object.pk year mt %}"><span class="badge badge-{% if mt == month %}primary{% else %}info{% endif %}">{{ mt|month_abbr }}</span></a>
-                    {% endfor %}
-                </h5>
+                {% if months %}
+                    <h5 class="my-0 p-2">
+                        <span class="text-normal text-condensed text-muted">Month: </span>
+                        {% for mt in months %}
+                            <a href="{% url "beamline-month" object.pk year mt %}"><span class="badge badge-{% if mt == month %}primary{% else %}info{% endif %}">{{ mt|month_abbr }}</span></a>
+                        {% endfor %}
+                    </h5>
+                {% endif %}
+                {% if quarters %}
+                    <h5 class="my-0 p-2">
+                        <span class="text-normal text-condensed text-muted">Quarter: </span>
+                        {% for qt in quarters %}
+                            <a href="{% url "beamline-quarter" object.pk year qt %}"><span class="badge badge-{% if qt == quarter %}primary{% else %}info{% endif %}">{{ qt }}</span></a>
+                        {% endfor %}
+                    </h5>
+                {% endif %}
                 </div>
             {% endif %}
         </div>

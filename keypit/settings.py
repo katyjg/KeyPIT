@@ -17,7 +17,6 @@ PROJECT_DIR = os.path.dirname(os.path.abspath(__file__))
 BASE_DIR = os.path.dirname(PROJECT_DIR)
 LOCAL_DIR = os.path.join(BASE_DIR, 'local')
 
-
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/3.0/howto/deployment/checklist/
 
@@ -28,7 +27,18 @@ SECRET_KEY = 'iq1itnaz-yeoqylpw_aae3fd*r==_#p@*yt#htie1__!07zk%#'
 DEBUG = True
 
 ALLOWED_HOSTS = []
-
+ADMIN_USERS = ['janzenk', 'fodjem']
+ADMIN_ROLES = [
+    'science-manager:director',
+    'machine-director_6031',
+    'chief-executive-officer_6006',
+    'chief-financial-officer_6033',
+    'science-manager:bioscience',
+    'science-manager:escience',
+    'science-manager:matscience',
+    'science-manager:projects',
+    'science-manager:industrial'
+]
 
 # Application definition
 INSTALLED_APPS = [
@@ -147,9 +157,10 @@ if CAS_ENABLED:
     CAS_SERVER_URL = "https://cas-test.clsi.ca/"
     CAS_SERVICE_DESCRIPTION = "KeyPIT"
     CAS_LOGOUT_COMPLETELY = True
-    CAS_SINGLE_SIGN_OUT = True
+    #CAS_SINGLE_SIGN_OUT = True
     CAS_CREATE_USER = True
-    CAS_REDIRECT_URL = '/'
+    CAS_REDIRECT_URL = 'login'
+    CAS_LOGIN_URL_NAME = 'login'
     CAS_LOGOUT_URL_NAME = 'logout'
 
 PEOPLE_TOKEN = 'd91fa59aab904ec78bee228c3e3af861'

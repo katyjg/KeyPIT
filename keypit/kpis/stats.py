@@ -25,7 +25,7 @@ def beamline_stats(period='month', year=timezone.now().year, **filters):
         categories = entries.values('kpi__category', 'kpi__category__name', 'kpi__category__description').distinct().order_by('kpi__category__priority')
         beamlines = entries.values('beamline').distinct().count() > 1
 
-        periods = get_data_periods(period=period)
+        periods = get_data_periods(period=period, **filters)
         period_names = period == 'month' and [calendar.month_abbr[per].title() for per in periods] or periods
         time_format = period == 'month' and '%b' or '%Y'
 

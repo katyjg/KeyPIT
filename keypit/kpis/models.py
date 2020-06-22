@@ -13,6 +13,9 @@ import string
 import logging
 logger = logging.getLogger(__name__)
 
+ADMIN_USERS = getattr(settings, 'ADMIN_USERS', [])
+ADMIN_ROLES = getattr(settings, 'ADMIN_ROLES', [])
+
 
 class Manager(AbstractUser):
     name = models.SlugField()
@@ -26,14 +29,21 @@ class Manager(AbstractUser):
 def update_user_roleperms(sender, **kwargs):
     token = getattr(settings, 'PEOPLE_TOKEN', 'no token')
     auth_header = {'Authorization': 'Bearer {token}'.format(token=token)}
+    user = Manager.objects.get(username=kwargs.get('username'))
     if kwargs.get('created'):
-        logger.info("New account {} created".format(kwargs.get('username')))
+        logger.info("New account {} created".format(user.username))
 
-    r = requests.get('https://people.lightsource.ca/api/v2/people/{}/roles'.format(kwargs.get('username')), headers=auth_header)
+    r = requests.get('https://people.lightsource.ca/api/v2/people/{}/roles'.format(user.username), headers=auth_header)
     if r.status_code == 200:
         roles = [d.get('code') for d in r.json()]
-        logger.info(roles)
-        Manager.objects.filter(username=kwargs.get('username')).update(user_roles=','.join(['<{}>'.format(role) for role in roles]))
+        logger.info('User roles: {}'.format(roles))
+        Manager.objects.filter(username=user.username).update(user_roles=','.join(['<{}>'.format(role) for role in roles]))
+
+    if user.username in ADMIN_USERS or any(['<{}>'.format(r) in user.roles() for r in ADMIN_ROLES]):
+        logger.info('User {} is superuser'.format(user.username))
+        user.is_superuser = True
+        user.is_staff = True
+        user.save()
 
 
 class Department(models.Model):
