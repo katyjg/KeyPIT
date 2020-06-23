@@ -1,5 +1,6 @@
-from django.db.models import Avg, Sum
-from django.template.defaultfilters import linebreaksbr
+from django.db.models import Avg, Sum, Value, TextField, CharField, Func, F, ExpressionWrapper
+from django.db.models.functions import Concat, ExtractMonth, ExtractYear, Cast, Trunc
+from django.template.defaultfilters import linebreaksbr, mark_safe
 from django.utils import timezone
 
 import calendar
@@ -17,16 +18,25 @@ def get_data_periods(period='year', **filters):
     return sorted(KPIEntry.objects.filter(**filters).values_list(field, flat=True).distinct())
 
 
-def beamline_stats(period='month', year=timezone.now().year, **filters):
+class MonthCast(Func):
+   """
+   Coerce an expression to a new field type.
+   """
+   function = 'TO_CHAR'
+   template = '%(function)s(%(expressions)s, \'Month YYYY\')'
+
+
+def beamline_stats(period='month', year=None, **filters):
     field = 'month__{}'.format(period)
     entries = KPIEntry.objects.filter(**filters)
 
-    if entries:
+    if entries.count():
         categories = entries.values('kpi__category', 'kpi__category__name', 'kpi__category__description').distinct().order_by('kpi__category__priority')
-        beamlines = entries.values('beamline').distinct().count() > 1
 
         periods = get_data_periods(period=period, **filters)
-        period_names = period == 'month' and [calendar.month_abbr[per].title() for per in periods] or periods
+        period_names = period == 'month' and [calendar.month_abbr[per].title() for per in periods] \
+                       or period == 'quarter' and ['Q{}'.format(per) for per in periods] \
+                       or periods
         time_format = period == 'month' and '%b' or '%Y'
 
         details = []
@@ -36,8 +46,7 @@ def beamline_stats(period='month', year=timezone.now().year, **filters):
             for kpi in KPI.objects.filter(category__id=cat['kpi__category'], pk__in=entries.values_list('kpi__id', flat=True).distinct()).order_by('priority'):
                 content += [{
                     'title': kpi.name,
-                    'description': "<h4>{}. {}</h4><p>{}</p>".format(kpi.priority_display(), kpi.name,
-                                                                     linebreaksbr(kpi.description)),
+                    'description': "<h4>{}. {}</h4><p>{}</p>".format(kpi.priority_display(), kpi.name, linebreaksbr(kpi.description)),
                     'style': 'col-12 text-condensed px-5'
                 }]
 
@@ -45,24 +54,17 @@ def beamline_stats(period='month', year=timezone.now().year, **filters):
                 kpi_filters.update({'kpi': kpi})
                 kpi_entries = kpi.entries.filter(**kpi_filters)
 
-                kpi_comments = period == 'month' and '<br/><br/>'.join(
-                    ['<strong>{} {}:</strong><br/>{}'.format(beamlines and k.beamline.acronym or '',
-                                                             datetime.strftime(k.month, '%B'), linebreaksbr(k.comments))
-                     for k in kpi_entries.order_by('-month').exclude(comments="").exclude(comments__isnull=True)]
-                ) or ''
+                kpi_comment_entries = kpi_entries.exclude(comments="").exclude(comments__isnull=True).order_by('-month', 'beamline__department', 'beamline').annotate(
+                    str_month=MonthCast('month', output_field=TextField())).annotate(
+                    fmt_comments=Concat(Value('<strong>'), 'beamline__acronym', Value(' '), 'str_month', Value('</strong><br/>'),
+                                        'comments', output_field=TextField())).values_list('fmt_comments', flat=True)
 
-                if kpi.kind == kpi.TYPE.TEXT or kpi_comments:
-                    # Add comments to the report
-                    content += [{
-                        'notes': kpi_comments or 'No data available',
-                        'style': 'col-12 px-5'
-                    }]
-                else:
+                kpi_comments = '<br/><br/>'.join(kpi_comment_entries)
+
+                if kpi.kind != kpi.TYPE.TEXT:
                     # Add plots to the report
                     kpi_filters.update({'value__isnull': False})
                     kpi_periods = get_data_periods(period=period, **kpi_filters)
-                    kpi_period_names = period == 'month' and [calendar.month_abbr[per].title() for per in
-                                                              kpi_periods] or kpi_periods
                     kpi_period_xvalues = [
                         datetime.strftime(
                             datetime(period == 'month' and year or per, period == 'month' and per or 1, 1, 0, 0), '%c')
@@ -82,18 +84,11 @@ def beamline_stats(period='month', year=timezone.now().year, **filters):
                         period_trend = list(period_data.values())
                         if period_data:
                             total = round(sum(period_data.values()) / len(period_data), 1)
-
-                    table_row = [[kpi.name] + [period_data.get(p, '-') for p in kpi_periods] + [total]]
+                    #table_row = [[kpi.name] + [period_data.get(p, '-') for p in kpi_periods] + [total]]
                     summary_data += [[kpi.name] + [period_data.get(p, '-') for p in periods] + [total]]
 
                     if period_data:
                         content += [{
-                            'kind': 'table',
-                            'data': [[""] + kpi_period_names + [kpi.get_kind_display()]] + [[""] + table_row[0][1:]],
-                            'header': 'row',
-                            'style': 'col-12 px-5',
-                            'notes': kpi_comments
-                        }, {
                             'title': kpi.name,
                             'kind': 'columnchart',
                             'data': {
@@ -120,6 +115,13 @@ def beamline_stats(period='month', year=timezone.now().year, **filters):
                             'notes': "No data available",
                             'style': 'col-12 px-5'
                         }]
+
+                if kpi_comments or kpi.kind == kpi.TYPE.TEXT:
+                    # Add comments to the report
+                    content += [{
+                        'notes': kpi_comments or 'No data available',
+                        'style': 'col-12 px-5'
+                    }]
 
             details.append({
                 'title': cat['kpi__category__name'],

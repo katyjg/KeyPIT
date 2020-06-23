@@ -73,6 +73,7 @@ class ReportViewMixin(object):
         report_ctx = super().get_context_data(**kwargs)
 
         year = self.kwargs.get('year')
+        period = self.kwargs.get('period') or 'year'
         filters = self.get_filters()
 
         report_ctx['years'] = stats.get_data_periods(period='year', **filters)
@@ -80,14 +81,17 @@ class ReportViewMixin(object):
         if year:
             filters.update({'month__year': year})
             report_ctx['year'] = year
-            for period in ['month', 'quarter']:
-                report_ctx['{}s'.format(period)] = stats.get_data_periods(period=period, **filters)
+            for per in ['month', 'quarter']:
+                report_ctx['{}s'.format(per)] = stats.get_data_periods(period=per, **filters)
             if self.kwargs.get('quarter'):
+                period = 'month'
                 report_ctx['quarter'] = self.kwargs.get('quarter')
                 filters.update({'month__quarter': self.kwargs.get('quarter')})
-            report_ctx['report'] = stats.beamline_stats(period='month', year=year, **filters)
+            report_ctx['report'] = stats.beamline_stats(period=period, year=year, **filters)
         else:
             report_ctx['report'] = stats.beamline_stats(period='year', **filters)
+
+        report_ctx['period'] = period
 
         return report_ctx
 

@@ -25,7 +25,7 @@
                     <h5 class="my-0 p-2">
                     <span class="text-normal text-condensed text-muted">Year: </span>
                     {% for yr in years %}
-                        <a href="{% url "kpi-year" object.pk yr %}"><span class="badge badge-{% if yr == year %}primary{% else %}info{% endif %}">{{ yr }}</span></a>
+                        <a href="{% url "kpi-year" object.pk yr 'month' %}"><span class="badge badge-{% if yr == year %}primary{% else %}info{% endif %}">{{ yr }}</span></a>
                     {% endfor %}
                     </h5>
                 </div>

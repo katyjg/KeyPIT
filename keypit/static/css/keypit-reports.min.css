@@ -2,3 +2,20 @@
   border-left-color: #17a2b8;
   font-weight: 400;
   margin-top: 1rem; }
+
+.notes.collapse:not(.show) {
+  display: block;
+  height: 7rem;
+  overflow: hidden; }
+
+.notes.collapsing {
+  height: 7rem; }
+
+.notes.collapse a.more {
+  position: absolute;
+  bottom: 1em;
+  right: 5em; }
+  .notes.collapse a.more.collapsed::after {
+    content: '+ Show More'; }
+  .notes.collapse a.more:not(.collapsed)::after {
+    content: '- Show Less'; }

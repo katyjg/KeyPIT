@@ -3,3 +3,27 @@
   font-weight: 400;
   margin-top: 1rem;
 }
+
+.notes.collapse {
+  &:not(.show) {
+    display: block;
+    height: 7rem;
+    overflow: hidden;
+  }
+}
+.notes.collapsing {
+  height: 7rem;
+}
+
+.notes.collapse a.more {
+  position: absolute;
+  bottom: 1em;
+  right: 5em;
+  &.collapsed::after  {
+    content: '+ Show More';
+  }
+
+  &:not(.collapsed)::after {
+    content: '- Show Less';
+  }
+}

@@ -24,23 +24,28 @@
 {% block object_status %}
     <div class="status-bar hidden-print">
         <div class="row">
-            <div class="col-1">
+            <div class="col-5">
                 <h5 class="my-0 p-2">
-                    <a href="{% url "department-detail" object.pk %}"><span class="badge badge-{% if year %}info{% else %}primary{% endif %}">&emsp;All&emsp;</span></a>&nbsp;
+                <span class="text-normal text-condensed text-muted">Year: </span>
+                <a href="{% url "department-detail" object.pk %}" class="border-right pr-2 mx-1"><span class="px-0 badge badge-{% if year %}info{% else %}primary{% endif %}">&emsp;All&emsp;</span></a>
+                {% for yr in years %}
+                    <a href="{% if period != 'year' %}{% url "department-year" object.pk yr period %}{% else %}{% url "department-year" object.pk yr 'month' %}{% endif %}">
+                        <span class="badge badge-{% if yr == year %}primary{% else %}info{% endif %}">{{ yr }}</span>
+                    </a>
+                {% endfor %}
                 </h5>
-            </div>
-            {% if years %}
-                <div class="col-4">
-                    <h5 class="my-0 p-2">
-                    <span class="text-normal text-condensed text-muted">Year: </span>
-                    {% for yr in years %}
-                        <a href="{% url "department-year" object.pk yr %}">
-                            <span class="badge badge-{% if yr == year %}primary{% else %}info{% endif %}">{{ yr }}</span>
+                {% if year %}
+                    <h5 class="my-0 pt-0 px-2 pb-2">
+                        <span class="text-normal text-condensed text-muted">Data: </span>
+                        <a href="{% url "department-year" object.pk year 'month' %}">
+                            <span class="badge badge-{% if period == 'month' %}primary{% else %}info{% endif %}">Monthly</span>
                         </a>
-                    {% endfor %}
+                        <a href="{% url "department-year" object.pk year 'quarter' %}">
+                            <span class="badge badge-{% if period == 'quarter' %}primary{% else %}info{% endif %}">Quarterly</span>
+                        </a>
                     </h5>
-                </div>
-            {% endif %}
+                {% endif %}
+            </div>
             <div class="col-7 text-right">
                 <h5 class="my-0 p-2">
                     <span class="text-normal text-condensed text-muted">Beamline: </span>

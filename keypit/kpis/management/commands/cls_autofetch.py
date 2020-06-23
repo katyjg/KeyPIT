@@ -13,8 +13,6 @@ USO_API = getattr(settings, 'USO_API', 'https://user.lightsource.ca/api/v1/')
 BEAMLINE_AVAILABILITY = 7
 TOTAL_NORMAL_SHIFTS = 8
 TOTAL_SHIFTS_USED = 9
-PEER_REVIEWED_ARTICLES = 5
-THESES = 14
 
 def format_localtime(dt):
     return datetime.strftime(timezone.localtime(pytz.utc.localize(dt)), '%Y-%m-%dT%H')
@@ -57,8 +55,6 @@ class Command(BaseCommand):
         for beamline in Beamline.objects.all():
             bl_n_shifts = 0
             bl_used_shifts = 0
-            articles = []
-            theses = []
             for bl in beamline.beamline_acronyms():
                 # Import Facility Schedule(s)
                 url = "{}schedule/beamtime/{}/?start={}&end={}".format(USO_API, bl, qstart, qend)
@@ -80,26 +76,8 @@ class Command(BaseCommand):
 
                 #KPIEntry.objects.filter(beamline=bl, month=start.date(), kpi__id=BEAMLINE_AVAILABILITY, defaults={'value': percent_used})
 
-                # Import Facility Publications
-                url = "{}publications/article/{}/".format(USO_API, bl)
-                r = requests.get(url)
-                if r.status_code == 200:
-                    dates = [datetime.strptime(s['date'], '%Y-%m-%d') for s in r.json()]
-                    articles += [d for d in dates if d.year == start.year and d.month == start.month]
-
-                for thesis in ['msc_thesis', 'phd_thesis']:
-                    url = "{}publications/{}/{}/".format(USO_API, thesis, bl)
-                    r = requests.get(url)
-                    if r.status_code == 200:
-                        dates = [datetime.strptime(s['date'], '%Y-%m-%d') for s in r.json()]
-                        theses += [d for d in dates if d.year == start.year and d.month == start.month]
 
             KPIEntry.objects.update_or_create(beamline=beamline, month=start, kpi=KPI.objects.get(pk=TOTAL_NORMAL_SHIFTS),
                                               defaults={'value': bl_n_shifts})
             KPIEntry.objects.update_or_create(beamline=beamline, month=start.date(), kpi=KPI.objects.get(pk=TOTAL_SHIFTS_USED),
                                               defaults={'value': bl_used_shifts})
-
-            KPIEntry.objects.update_or_create(beamline=beamline, month=start.date(), kpi=KPI.objects.get(pk=PEER_REVIEWED_ARTICLES),
-                                              defaults={'value': len(articles)})
-            KPIEntry.objects.update_or_create(beamline=beamline, month=start.date(), kpi=KPI.objects.get(pk=THESES),
-                                              defaults={'value': len(theses)})
