@@ -1,0 +1,100 @@
+$base-font: "Fira Sans";
+$narrow-font: "Fira Sans Condensed";
+
+$dark-gray: #777;
+
+/* Any styling for printing can be done here */
+@page {
+  margin: 1cm;
+}
+body {
+  width: 872px !important;
+  font-min-size: 11pt;
+}
+main {
+  margin: 0;
+}
+.d-flex, .flex-row, .row, .folio-body > .row, .folio-header, .folio-body {
+  display: block !important;
+  flex: unset !important;
+  flex-direction: unset !important;
+}
+.folio-body {
+	padding: 0;
+}
+.folio-header {
+  min-height: unset;
+}
+.container-fluid {
+  margin: 0;
+  padding: 0;
+  .folio {
+    margin: 0 !important;
+  }
+  .folio-body > .row {
+    margin: 0;
+  }
+}
+.heading-box {
+  color: black;
+  a {
+    color: black;
+    &::after {
+      display: none;
+    }
+  }
+}
+#header, nav, .navbar,  #footer, .footer, ul.toolbar, .tools-box, .status-bar {
+	display: none;
+}
+a {
+    text-decoration: none !important;
+}
+.table > tbody > tr > td{
+	padding: 0px;
+	line-height: 1;
+	vertical-align: middle;
+	max-height: 14px !important;
+}
+h3.section-title {
+  margin-left: 0;
+}
+.jumbotron {
+  border: 1px solid #e9ecef;
+  //border-left: 0.25rem solid #17a2b8;
+  border-radius: 0;
+  background: none !important;
+  .description {
+    color: $dark-gray !important;
+  }
+}
+a[href]:after {
+  content: " (" attr(href) ")";
+  font-family: $narrow-font;
+  color: $dark-gray;
+  text-decoration: none;
+}
+h2, h3, h4 {
+  page-break-after: avoid;
+  break-after: avoid;
+}
+.section-entry, .notes li {
+  page-break-inside: avoid;
+}
+.col-md-9, .col-md-7, .col-md-3, .col-md-5 {
+  max-width: 100%;
+  flex: 0 0 100%;
+}
+.col-md-6 {
+  max-width: 50%;
+  float: left;
+  flex: 0 0 100%;
+}
+.notes {
+  clear: both;
+  border-left: 2px solid #e9ecef;
+  background: none !important;
+}
+.badge {
+  border: none;
+}

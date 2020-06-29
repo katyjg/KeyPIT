@@ -1,12 +1,13 @@
-from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from django.contrib.messages.views import SuccessMessageMixin
-from django.http import JsonResponse
+from django.db.models import Q, Count
+from django.http import JsonResponse, HttpResponseRedirect
 from django.template.defaultfilters import linebreaksbr
 from django.urls import reverse_lazy
 from django.views.generic import edit, detail, View
 
 from itemlist.views import ItemListView
 from datetime import datetime
+import re
 
 from keypit.kpis import models, forms, stats
 from keypit.kpis.mixins import OwnerRequiredMixin, AdminRequiredMixin, ReportViewMixin, AsyncFormMixin, ListViewMixin, UserRoleMixin
@@ -16,10 +17,28 @@ def format_description(val, record):
     return linebreaksbr(val)
 
 
-class Dashboard(LoginRequiredMixin, ReportViewMixin, detail.DetailView):
+class LandingPage(UserRoleMixin, View):
     """
-    This is the "Dashboard" view. Unfiltered KPI data is displayed
-    # TODO: Direct users to appropriate data level, based on their roles
+    Dispatch user to an appropriate view based on their roles.
+    """
+
+    def dispatch(self, request, *args, **kwargs):
+        beamline = models.Beamline.objects.filter(
+            acronym__icontains=re.search(r'\<beamline-staff:(.*?)\>', self.request.user.user_roles).group(1))
+        if beamline.count() == 1:
+            return HttpResponseRedirect(reverse_lazy('beamline-detail', kwargs={'pk': beamline.first().pk}))
+
+        division = models.Department.objects.filter(
+            acronym__icontains=re.search(r'\<employee:(.*?)\>', self.request.user.user_roles).group(1))
+        if division.count() == 1:
+            return HttpResponseRedirect(reverse_lazy('department-detail', kwargs={'pk': division.first().pk}))
+
+        return HttpResponseRedirect(reverse_lazy('dashboard'))
+
+
+class Dashboard(UserRoleMixin, detail.DetailView):
+    """
+    This is the "Dashboard" view.
     """
     model = models.Manager
     template_name = "kpis/dashboard.html"
@@ -34,22 +53,25 @@ class Dashboard(LoginRequiredMixin, ReportViewMixin, detail.DetailView):
 
     def get_context_data(self, **kwargs):
         context = super(Dashboard, self).get_context_data(**kwargs)
-        departments = models.Department.objects.all()
+        divisions = models.Department.objects.filter(division__isnull=True).annotate(beamline_count=Count('beamlines'), department_count=Count('departments'))
+        departments = models.Department.objects.filter(division__isnull=False)
+        context.update(divisions=divisions)
         context.update(departments=departments)
+        context.update(beamlines=models.Beamline.objects.all())
 
         return context
 
 
 class DepartmentList(UserRoleMixin, ListViewMixin, ItemListView):
     model = models.Department
-    list_filters = []
-    list_columns = ['acronym', 'name']
+    list_filters = ['division']
+    list_columns = ['acronym', 'name', 'division']
     list_search = ['name', 'acronym']
     link_url = 'department-detail'
     add_url = 'new-department'
     link_data = False
     tool_template = 'kpis/components/kpi-list-tools.html'
-    #ordering = ['status', '-modified']
+    ordering = ['-division',]
     paginate_by = 25
 
 
@@ -58,7 +80,10 @@ class DepartmentDetail(UserRoleMixin, ReportViewMixin, detail.DetailView):
     template_name = "kpis/entries/department.html"
 
     def get_filters(self):
-        return {'beamline__department': self.object}
+        filters = {'beamline__department': self.object}
+        if self.object.is_division():
+            filters = {'beamline__department__division': self.object}
+        return filters
 
 
 class DepartmentCreate(AdminRequiredMixin, SuccessMessageMixin, AsyncFormMixin, edit.CreateView):
@@ -183,7 +208,7 @@ class BeamlineCreateMonth(OwnerRequiredMixin, SuccessMessageMixin, AsyncFormMixi
     def form_valid(self, form):
         self.dt = datetime(form.cleaned_data['year'], form.cleaned_data['month'], 1).date()
         self.beamline = form.cleaned_data['beamline']
-        for kpi in models.KPI.objects.all():
+        for kpi in models.KPI.objects.filter(Q(department__in=self.beamline.departments()) | Q(department__isnull=True)):
             models.KPIEntry.objects.get_or_create(beamline=self.beamline, month=self.dt, kpi=kpi)
 
         return JsonResponse({'url': self.get_success_url()}, safe=False)

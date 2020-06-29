@@ -4,9 +4,9 @@
 {% load settings %}
 
 {% block page_heading %}
-    <h3 class="text-condensed"> <span class="text-muted"><strong>{{ user.username|upper }}</strong> |</span> All Data </h3>
+    <h3 class="text-condensed">Welcome, <span class="text-muted"><strong>{{ user.username|upper }}</strong></span>! </h3>
     <span class="text-muted hidden-xs">
-        Start here to manage and monitor KPIs, and review historical data.
+        Key Performance Indicator Tracking
     </span>
 {% endblock %}
 
@@ -19,67 +19,41 @@
 {% block object_status %}
     <div class="status-bar hidden-print">
         <div class="row">
-            <div class="col-8 d-flex">
-                <h5 class="my-0 p-2">
-                    <span class="text-normal text-condensed text-muted">Year: </span>
-                    <a href="{% url "dashboard" %}" class="border-right pr-3 mr-1"><span class="px-0 badge badge-{% if not year %}primary{% else %}info{% endif %}">&emsp;All&emsp;</span></a>&nbsp;
-                </h5>
-                <h5 class="my-0 p-2">
-                {% for yr in years %}
-                    <a href="{% if period != 'year' %}{% url 'all-year' yr period %}{% else %}{% url 'all-year' yr 'month' %}{% endif %}">
-                        <span class="badge badge-{% if yr == year %}primary{% else %}info{% endif %}">{{ yr }}</span>
-                    </a>
-                {% endfor %}
-                </h5>
-            </div>
-            <div class="col-4 text-right">
-                <h5 class="my-0 p-2">
-                    <span class="text-normal text-condensed text-muted">Department: </span>
-                    {% for department in departments %}
-                        <a href="{% url "department-detail" department.pk %}">
+
+            <div class="col-12">
+                <h5 class="my-0 p-2 row">
+                    <div class="col-2">
+                    <span class="text-normal text-condensed text-muted">Department: </span></div>
+                    <div class="col-10">{% for department in departments %}
+                        <a href="{% url "department-detail" department.pk %}" title="{{ department.name }}">
                             <span class="badge badge-info">{{ department.acronym }}</span>
                         </a>
-                    {% endfor %}&nbsp;
+                    {% endfor %}&nbsp;</div>
                 </h5>
             </div>
-            {% if year %}
-                <div class="col-12">
-                    <h5 class="my-0 pt-0 px-2 pb-2">
-                        <span class="text-normal text-condensed text-muted">Data: </span>
-                        <a href="{% url "all-year" year 'month' %}">
-                            <span class="badge badge-{% if period == 'month' %}primary{% else %}info{% endif %}">Monthly</span>
+                    <div class="col-12">
+                <h5 class="my-0 px-2 pb-2 pt-0 row">
+                <div class="col-2">
+                    <span class="text-normal text-condensed text-muted">Beamline: </span></div><div class="col-10">
+                    {% for bl in beamlines %}
+                        <a href="{% url "beamline-detail" bl.pk %}" title="{{ bl.name }}">
+                            <span class="badge badge-info">{{ bl.acronym }}</span>
                         </a>
-                        <a href="{% url "all-year" year 'quarter' %}">
-                            <span class="badge badge-{% if period == 'quarter' %}primary{% else %}info{% endif %}">Quarterly</span>
-                        </a>
-                    </h5>
-                </div>
-            {% endif %}
+                    {% endfor %}&nbsp;</div>
+                </h5>
+            </div>
         </div>
     </div>
 {% endblock %}
 
 {% block full %}
     <div class="row">
-        <div id="kpi-report" class="col-12"></div>
+        <div class="list-group col-12">
+            {% for division in divisions %}
+                {% include "kpis/entries/department-list-item.html" with department=division %}
+            {% endfor %}
+        </div>
     </div>
 {% endblock %}	
 
-{% block extra_js %}
-    {{ block.super }}
-    <script type="text/javascript">
-        var report = {{ report | safe }};
-        $(document).ready(function() {
-            $('#kpi-report').liveReport({
-                data: report
-            });
-            $('.notes').each(function(i, el) {
-                if($(el).height() > 70) {
-                    $(el).attr('id', 'collapse-' + i);
-                    $(el).addClass('collapse');
-                    $(el).prepend('<a role="button" class="collapsed more" data-toggle="collapse" href="#collapse-' + i + '" aria-expanded="false" aria-controls="collapse' + i + '"></a>');
-                }
-            });
-        });
-    </script>
-{% endblock %}
+

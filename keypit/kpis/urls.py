@@ -3,6 +3,7 @@ from django.urls import path
 from . import views
 
 urlpatterns = [
+    path('', views.Dashboard.as_view(), name='dashboard'),
     path('<int:year>/<str:period>/', views.Dashboard.as_view(), name='all-year'),
 
     path('departments/', views.DepartmentList.as_view(), name='department-list'),

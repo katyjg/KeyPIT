@@ -1,17 +1,23 @@
 {% load icons %}
 <div class="p-2 list-group-item list-group-item-default">
     <div class="d-flex flex-row">
-        <div class="box-status text-center">
-            {% show_icon label='' icon='ti ti-md ti-home' %}
-        </div>
+        <div class="box-status text-center"><a class="text-condensed" href="{% url "department-detail" department.pk %}">
+            {% show_icon label=department.acronym icon='ti ti-md ti-home' %}
+        </a></div>
         <div class="pl-3 overflow-ellipsis text-muted align-self-center">
             <h5 class="m-0">
-                <a class="text-muted text-condensed" href="{% url "department-detail" department.pk %}"
-                   title='View Department "{{ department.name }}"'> <strong>{{ department.acronym|upper }}</strong> | {{ department.name }}
+                <a class="text-muted text-condensed" href="{% url "department-detail" department.pk %}">
+                    <strong>{{ department.acronym|upper }}</strong> | {{ department.name }}
                 </a>
             </h5>
             <div>
-                <strong>{{ department.beamline_count }}</strong> Beamline{{ department.beamline_count|pluralize }}
+                {% if department.department_count %}
+                    <strong>{{ department.department_count }}</strong> Department{{ department.department_count|pluralize }}
+                {% endif %}
+                {% if department.beamline_count %}
+                    {% if department.department_count %} / {% endif %}
+                    <strong>{{ department.beamline_count }}</strong> Beamline{{ department.beamline_count|pluralize }}
+                {% endif %}
             </div>
         </div>
     </div>

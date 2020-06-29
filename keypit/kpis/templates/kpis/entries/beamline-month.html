@@ -31,7 +31,7 @@
                         </div>
                         <div class="pl-3 align-self-center">
                             <div class="m-0">
-                                {% if entry.comments %}<strong>{{ entry.comments|linebreaksbr }}</strong>{% else %}<em>No additional comments</em>{% endif %}
+                                {% if entry.comments %}<strong>{{ entry.comments|safe|linebreaksbr }}</strong>{% else %}<em>No additional comments</em>{% endif %}
                             </div>
                         </div>
                         {% if owner %}

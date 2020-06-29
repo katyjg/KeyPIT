@@ -37,7 +37,8 @@ def update_user_roleperms(sender, **kwargs):
     if r.status_code == 200:
         roles = [d.get('code') for d in r.json()]
         logger.info('User roles: {}'.format(roles))
-        Manager.objects.filter(username=user.username).update(user_roles=','.join(['<{}>'.format(role) for role in roles]))
+        user.user_roles = ','.join(['<{}>'.format(role) for role in roles])
+        user.save()
 
     if user.username in ADMIN_USERS or any(['<{}>'.format(r) in user.roles() for r in ADMIN_ROLES]):
         logger.info('User {} is superuser'.format(user.username))
@@ -52,9 +53,25 @@ class Department(models.Model):
     """
     name = models.CharField(max_length=600)
     acronym = models.CharField(max_length=50)
+    division = models.ForeignKey('self', blank=True, null=True, on_delete=models.SET_NULL, related_name="departments")
 
     def __str__(self):
         return self.acronym
+
+    def is_division(self):
+        return self.departments.exists()
+
+    def divisions(self):
+        dept = self.division
+        depts = []
+        if dept:
+            depts.append(dept)
+            while dept.division:
+                depts.append(dept.division)
+                dept = dept.division
+                if self == dept:
+                    break
+        return depts
 
 
 class Beamline(models.Model):
@@ -71,6 +88,14 @@ class Beamline(models.Model):
 
     def beamline_acronyms(self):
         return self.beamlines and [ba.strip() for ba in self.beamlines.split(',')] or [self.acronym]
+
+    def departments(self):
+        dept = self.department
+        depts = []
+        if dept:
+            depts.append(dept)
+            depts += dept.divisions()
+        return depts
 
 
 class KPICategory(models.Model):
@@ -102,7 +127,8 @@ class KPI(models.Model):
     )
     name = models.CharField(max_length=250)
     description = models.CharField(max_length=600)
-    category = models.ForeignKey(KPICategory, blank=True, null=True, on_delete=models.SET_NULL, related_name="kpis")
+    category = models.ForeignKey(KPICategory, blank=True, null=True, on_delete=models.SET_NULL, related_name='kpis')
+    department = models.ForeignKey(Department, blank=True, null=True, on_delete=models.SET_NULL, related_name='kpis')
     kind = models.IntegerField(choices=TYPE, default=TYPE.SUM)
     priority = models.IntegerField(default=0)
 

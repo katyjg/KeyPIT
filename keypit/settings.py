@@ -157,7 +157,6 @@ if CAS_ENABLED:
     CAS_SERVER_URL = "https://cas-test.clsi.ca/"
     CAS_SERVICE_DESCRIPTION = "KeyPIT"
     CAS_LOGOUT_COMPLETELY = True
-    #CAS_SINGLE_SIGN_OUT = True
     CAS_CREATE_USER = True
     CAS_REDIRECT_URL = 'login'
     CAS_LOGIN_URL_NAME = 'login'

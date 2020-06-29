@@ -22,10 +22,10 @@ from django.contrib.auth.views import LoginView, LogoutView
 from django.contrib.staticfiles.urls import staticfiles_urlpatterns
 from django.urls import path
 
-from keypit.kpis.views import Dashboard
+from keypit.kpis.views import LandingPage
 
 urlpatterns = [
-    url(r'^$', login_required(Dashboard.as_view()), {}, 'dashboard'),
+    url(r'^$', login_required(LandingPage.as_view()), {}, 'landing'),
     path('admin/', admin.site.urls),
     path('keypit/',  include('keypit.kpis.urls')),
 ]

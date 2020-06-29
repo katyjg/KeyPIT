@@ -4,12 +4,20 @@
 {% load icons %}
 
 {% block page_heading %}
-    <h3 class="text-condensed">
-        <i class="text-muted fa fa-fw {% if object.is_editable %}fa-unlock{% else %}fa-lock{% endif %}"></i>
-        <span class="text-muted">{{ object.acronym|upper }} | </span><strong>{{ object.name }}</strong>
+    <h3 class="text-condensed text-muted">
+        {% for dept in object.divisions reversed %}
+            <a href="{% url 'department-detail' dept.pk %}" title="{{ dept.name }}">{{ dept }}</a> <span class="ti ti-sm ti-angle-right"></span>
+        {% endfor %}
+        <span class="text-dark">{{ object.acronym|upper }}</span> |
+        <span class="text-dark"><strong>{{ object.name }}</strong></span>
     </h3>
     <span class="text-muted">
-        <strong>{{ object.beamlines.count }}</strong> Beamline{{ object.beamlines.count|pluralize }}
+        {% if object.departments.count %}
+            <strong>{{ object.departments.count }}</strong> Department{{ object.departments.count|pluralize }}
+        {% endif %}
+        {% if object.division %}
+            <strong>1</strong> of <strong>{{ object.division.departments.count }}</strong> Department{{ object.division.departments.count|pluralize }} in {{ object.division.name }}
+        {% endif %}
     </span>
 {% endblock %}
 
@@ -48,12 +56,22 @@
             </div>
             <div class="col-7 text-right">
                 <h5 class="my-0 p-2">
-                    <span class="text-normal text-condensed text-muted">Beamline: </span>
-                    {% for beamline in object.beamlines.all %}
-                        <a href="{% url "beamline-detail" beamline.pk %}">
-                            <span class="badge badge-info">{{ beamline.acronym }}</span>
-                        </a>
-                    {% endfor %}&nbsp;
+                    {% if object.beamlines.all %}
+                        <span class="text-normal text-condensed text-muted">Beamline: </span>
+                        {% for beamline in object.beamlines.all %}
+                            <a href="{% url "beamline-detail" beamline.pk %}">
+                                <span class="badge badge-info" title="{{ beamline.name }}">{{ beamline.acronym }}</span>
+                            </a>
+                        {% endfor %}&nbsp;
+                    {% endif %}
+                    {% if object.departments.all %}
+                        <span class="text-normal text-condensed text-muted">Department: </span>
+                        {% for department in object.departments.all %}
+                            <a href="{% url "department-detail" department.pk %}">
+                                <span class="badge badge-info" title="{{ department.name }}">{{ department.acronym }}</span>
+                            </a>
+                        {% endfor %}&nbsp;
+                    {% endif %}
                 </h5>
             </div>
         </div>
@@ -67,6 +85,13 @@
         $(document).ready(function() {
             $('#kpi-report').liveReport({
                 data: report
+            });
+            $('.notes').each(function(i, el) {
+                if($(el).height() > 140) {
+                    $(el).attr('id', 'collapse-' + i);
+                    $(el).addClass('collapse');
+                    $(el).prepend('<a role="button" class="collapsed more" data-toggle="collapse" href="#collapse-' + i + '" aria-expanded="false" aria-controls="collapse' + i + '"></a>');
+                }
             });
         });
     </script>

@@ -33,7 +33,7 @@ class DepartmentForm(forms.ModelForm):
 
     class Meta:
         model = Department
-        fields = ['name', 'acronym']
+        fields = ['name', 'acronym', 'division']
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -49,7 +49,8 @@ class DepartmentForm(forms.ModelForm):
         self.body.layout = Layout(
             Div(
                 Div('name', css_class="col-12"),
-                Div('acronym', css_class="col-12"),
+                Div('acronym', css_class="col-6"),
+                Div('division', css_class="col-6"),
                 css_class="row"
             ),
         )
@@ -94,7 +95,7 @@ class KPIForm(forms.ModelForm):
 
     class Meta:
         model = KPI
-        fields = ['name', 'description', 'category', 'kind', 'priority']
+        fields = ['name', 'description', 'category', 'kind', 'priority', 'department']
         widgets = {
             'description': forms.Textarea(attrs={"cols": 54, "rows": 4}),
         }
@@ -119,7 +120,8 @@ class KPIForm(forms.ModelForm):
                 css_class="row"
             ),
             Div(
-                Div('kind', css_class="col-12"),
+                Div('kind', css_class="col-6"),
+                Div('department', css_class="col-6"),
                 css_class="row"
             )
         )

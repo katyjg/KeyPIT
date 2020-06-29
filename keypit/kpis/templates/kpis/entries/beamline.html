@@ -4,12 +4,17 @@
 {% load date_tags %}
 
 {% block page_heading %}
-    <h3 class="text-condensed">
-        <span class="text-muted">{{ object.acronym|upper }} | </span>
-        <strong>{% if month %}{{ month|month_name }} {% elif quarter %}Q{{ quarter }} {% endif %}{% if year %}{{ year }}{% else %}{{ object.name }}{% endif %}</strong>
+    <h3 class="text-condensed text-muted">
+        {% for dept in object.departments reversed %}
+            <a href="{% url 'department-detail' dept.pk %}" title="{{ dept.name }}">{{ dept }}</a> <span class="ti ti-sm ti-angle-right"></span>
+        {% endfor %}
+        <span class="text-dark">{{ object.acronym|upper }}</span> |
+        <span class="text-dark">
+            <strong>{% if month %}{{ month|month_name }} {% elif quarter %}Q{{ quarter }} {% endif %}{% if year %}{{ year }}{% else %}{{ object.name }}{% endif %}</strong>
+        </span>
     </h3>
     <span class="text-muted">
-        <strong>1</strong> of <strong>{{ object.department.beamlines.count }}</strong> Beamline{{ object.department.beamlines.count|pluralize }} in <a href="{% url 'department-detail' object.department.pk %}">{{ object.department }}</a>
+        <strong>1</strong> of <strong>{{ object.department.beamlines.count }}</strong> Beamline{{ object.department.beamlines.count|pluralize }} in {{ object.department.name }}
     </span>
 {% endblock %}
 

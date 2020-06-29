@@ -3,13 +3,13 @@
   font-weight: 400;
   margin-top: 1rem; }
 
+.notes ul {
+  margin-bottom: 0; }
+
 .notes.collapse:not(.show) {
   display: block;
   height: 7rem;
   overflow: hidden; }
-
-.notes.collapsing {
-  height: 7rem; }
 
 .notes.collapse a.more {
   position: absolute;
@@ -19,3 +19,6 @@
     content: '+ Show More'; }
   .notes.collapse a.more:not(.collapsed)::after {
     content: '- Show Less'; }
+
+.notes.collapsing {
+  height: 7rem; }
