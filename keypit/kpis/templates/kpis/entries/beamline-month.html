@@ -6,7 +6,7 @@
 {% block full %}
 <div class="row">
     <div class="col-12 report-viewer pt-0">
-    {% for cat, entries in categories.items %}
+    {% for cat, indicators in categories.items %}
         <section>
         <h3 class="col-12 section-title {% if not forloop.first %}mt-5{% endif %}">{{ cat }}</h3>
         <div class="section-entry col-12 jumbotron pt-4 pb-2 text-muted">
@@ -16,56 +16,50 @@
             </div>
         </div>
 
-        {% for entry in entries %}
+        {% for kpi in indicators %}
             <div class="section-entry col-12 px-5 text-condensed">
-                <div class="description">
-                    <h4>{{ entry.kpi.priority_display }}. {{ entry.kpi.name }}</h4><a name="{{ entry.kpi.name }}"></a>
-                    <p>{{ entry.kpi.description|linebreaksbr }}</p>
-                </div>
-            </div>
-            <div class="section-entry col-12 px-5">
-                <div class="notes">
-                    <div class="d-flex flex-row">
-                        <div class="box-status text-center pt-2">
-                            <span class="text-large">{{ entry.value|default_if_none:"-" }}</span>
-                        </div>
-                        <div class="pl-3 align-self-center">
-                            <div class="m-0">
-                                {% if entry.comments %}<strong>{{ entry.comments|safe|linebreaksbr }}</strong>{% else %}<em>No additional comments</em>{% endif %}
-                            </div>
-                        </div>
-                        {% if owner %}
+                <div class="description d-flex flex-row pr-3">
+                    <div>
+                        <h4>{{ kpi.priority_display }}. {{ kpi.name }}</h4><a name="{{ kpi.name }}"></a>
+                        <p>{{ kpi.description|linebreaksbr }}</p>
+                    </div>
+                    {% if owner and not kpi.entry %}
                         <div class="tools-box ml-auto">
-                            <a href="#!"  data-form-link="{% url "kpientry-edit" entry.pk %}" title="Edit this information">
-                                {% show_icon label='Edit' icon='ti ti-md ti-pencil' color='info' %}
+                            <a href="#!"  data-form-link="{% url "kpientry-new" %}?beamline={{ beamline.pk }}&kpi={{ kpi.pk }}&month={{ year }}-{{ month }}" title="Add information">
+                                {% show_icon label='Add' icon='ti ti-md ti-plus' color='info' %}
                             </a>
                         </div>
-                        {% endif %}
+                    {% endif %}
+                </div>
+            </div>
+            {% if kpi.entry %}
+                <div class="section-entry col-12 px-5">
+                    <div class="notes">
+                        <div class="d-flex flex-row">
+                            {% if kpi.kind != kpi.TYPE.TEXT %}
+                            <div class="box-status text-center pt-2">
+                                <span class="text-large">{{ kpi.value|default_if_none:"-" }}</span>
+                            </div>
+                            {% endif %}
+                            <div class="pl-3 align-self-center">
+                                <div class="m-0">
+                                    {% if kpi.comments %}<strong>{{ kpi.comments|safe|linebreaksbr }}</strong>{% else %}<em>No additional comments</em>{% endif %}
+                                </div>
+                            </div>
+                            {% if owner %}
+                                <div class="tools-box ml-auto">
+                                    <a href="#!"  data-form-link="{% url "kpientry-edit" kpi.entry %}" title="Edit this information">
+                                        {% show_icon label='Edit' icon='ti ti-md ti-pencil' color='info' %}
+                                    </a>
+                                </div>
+                            {% endif %}
+                        </div>
                     </div>
                 </div>
-            </div>
+            {% endif %}
         {% endfor %}
         </section>
-    {% empty %}
-        <div class="card mb-4">
-            <div class="list-group list-group-flush">
-                <div class="list-group-item empty p-2">
-                    <a href="#!" data-form-link="{% url "new-this-month" beamline.pk year month %}" class="d-flex flex-row">
-                        <div class="box-status">
-                            <div class="text-center text-muted">
-                                <div title="Create a New Monthly Report" class="ti ti-md ti-plus"></div>
-                                <div><small>Start Now</small></div>
-                            </div>
-                        </div>
-                        <div class="pl-3 overflow-ellipsis flex-shrink-1 align-self-center">
-                            <h4 class="p-0 m-0 text-condensed">Click here to start a new monthly KPI report for this beamline</h4>
-                            <span>{{ beamline.acronym|upper }} | {{ month|month_name }} {{ year }}</span>
-                        </div>
-                    </a>
-                </div>
-            </div>
-        </div>
     {% endfor %}
     </div>
-</div>
+
 {% endblock %}

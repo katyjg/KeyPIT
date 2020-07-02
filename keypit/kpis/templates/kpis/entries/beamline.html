@@ -20,9 +20,6 @@
 
 {% block object_tools %}
     {% if owner %}
-        <a href="#!0" data-form-link="{% url "new-month" object.pk %}">
-            {% show_icon label='New Report' icon='ti ti-md ti-plus' %}
-        </a>
         <a href="#!" data-form-link="{% url 'beamline-edit' object.pk %}">
             {% show_icon label='Edit' icon='ti ti-md ti-pencil-alt' %}
         </a>
@@ -52,26 +49,23 @@
                     </h5>
                 {% endif %}
             </div>
-            {% if months %}
-                <div class="col-7 text-right">
-                {% if months %}
+            <div class="col-7 text-right">
+                {% if year %}
                     <h5 class="my-0 p-2">
                         <span class="text-normal text-condensed text-muted">Month: </span>
-                        {% for mt in months %}
-                            <a href="{% url "beamline-month" object.pk year mt %}"><span class="badge badge-{% if mt == month %}primary{% else %}info{% endif %}">{{ mt|month_abbr }}</span></a>
+                        {% for mt in 12|rangelist %}
+                            <a href="{% url "beamline-month" object.pk year mt %}">
+                                <span class="badge badge-{% if mt == month %}primary{% elif mt in months %}info{% else %}secondary{% endif %}">{{ mt|month_abbr }}</span></a>
                         {% endfor %}
                     </h5>
-                {% endif %}
-                {% if quarters %}
                     <h5 class="my-0 pb-2 px-2 pt-0">
                         <span class="text-normal text-condensed text-muted">Quarter: </span>
-                        {% for qt in quarters %}
-                            <a href="{% url "beamline-quarter" object.pk year qt %}"><span class="badge badge-{% if qt == quarter %}primary{% else %}info{% endif %}">Q{{ qt }}</span></a>
+                        {% for qt in 4|rangelist %}
+                            <a href="{% url "beamline-quarter" object.pk year qt %}"><span class="badge badge-{% if qt == quarter %}primary{% elif qt in quarters %}info{% else %}secondary{% endif %}">Q{{ qt }}</span></a>
                         {% endfor %}
                     </h5>
                 {% endif %}
-                </div>
-            {% endif %}
+            </div>
         </div>
     </div>
 {% endblock %}

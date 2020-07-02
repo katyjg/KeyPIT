@@ -32,5 +32,6 @@ urlpatterns = [
     path('kpis/<int:pk>/<int:year>/<str:period>/', views.KPIDetail.as_view(), name='kpi-year'),
     path('kpis/<int:pk>/edit/', views.KPIEdit.as_view(), name='kpi-edit'),
 
+    path('entries/new/', views.KPIEntryCreate.as_view(), name='kpientry-new'),
     path('entries/<int:pk>/edit/', views.KPIEntryEdit.as_view(), name='kpientry-edit'),
 ]

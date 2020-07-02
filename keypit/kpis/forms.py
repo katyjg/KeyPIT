@@ -1,5 +1,6 @@
 from django import forms
 from django.forms import ValidationError
+from django.template.defaultfilters import linebreaksbr
 from django.urls import reverse_lazy
 from django.utils import timezone
 from django.utils.translation import ugettext as _
@@ -172,9 +173,12 @@ class KPIEntryForm(forms.ModelForm):
 
     class Meta:
         model = KPIEntry
-        fields = ['value', 'comments']
+        fields = ['value', 'comments', 'beamline', 'kpi', 'month']
         widgets = {
             'comments': forms.Textarea(attrs={"rows": 4}),
+            'beamline': forms.HiddenInput(),
+            'kpi': forms.HiddenInput(),
+            'month': forms.HiddenInput()
         }
 
     def __init__(self, *args, **kwargs):
@@ -183,12 +187,19 @@ class KPIEntryForm(forms.ModelForm):
         self.body = BodyHelper(self)
         self.footer = FooterHelper(self)
         if self.instance.pk:
-            self.body.title = u"{}".format(self.instance.kpi.name)
             self.body.form_action = reverse_lazy('kpientry-edit', kwargs={'pk': self.instance.pk})
+            kpi = self.instance.kpi
+        else:
+            self.body.form_action = reverse_lazy('kpientry-new')
+            kpi = self.initial['kpi']
+        if kpi.kind == KPI.TYPE.TEXT:
+            self.fields['value'].widget = forms.HiddenInput()
+        self.body.title = u"{}".format(kpi.name)
         self.body.layout = Layout(
             Div(
+                'beamline', 'kpi', 'month',
+                HTML("<div class='jumbotron p-3 mb-2 col-12'>{}</div>".format(linebreaksbr(kpi.description))),
                 Div('value', css_class="col-3"),
-                HTML("<div class='col-9 mt-4'>{}</div>".format(self.instance.kpi.description)),
                 Div('comments', css_class="col-12 w-100"),
                 css_class="row"
             ),
