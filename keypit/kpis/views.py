@@ -161,7 +161,7 @@ class BeamlineMonth(UserRoleMixin, detail.DetailView):
         if entries.filter(kpi__category__isnull=True).exists():
             context['categories']['Other'] = entries.filter(kpi__category__isnull=True)
 
-        filters = {'month__year': year}
+        filters = {'month__year': year, 'beamline': self.object}
         context['years'] = stats.get_data_periods(period='year')
         context['months'] = stats.get_data_periods(period='month', **filters)
         context['quarters'] = stats.get_data_periods(period='quarter', **filters)

@@ -26,19 +26,12 @@ SECRET_KEY = 'iq1itnaz-yeoqylpw_aae3fd*r==_#p@*yt#htie1__!07zk%#'
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
-ADMIN_USERS = ['janzenk', 'fodjem']
-ADMIN_ROLES = [
-    'science-manager:director',
-    'machine-director_6031',
-    'chief-executive-officer_6006',
-    'chief-financial-officer_6033',
-    'science-manager:bioscience',
-    'science-manager:escience',
-    'science-manager:matscience',
-    'science-manager:projects',
-    'science-manager:industrial'
-]
+ALLOWED_HOSTS = ['*']
+INTERNAL_IPS = ['127.0.0.1']
+TRUSTED_IPS = ['127.0.0.1/32']
+
+ADMIN_USERS = []
+ADMIN_ROLES = []
 
 # Application definition
 INSTALLED_APPS = [
@@ -130,42 +123,6 @@ USE_I18N = True
 USE_L10N = True
 USE_TZ = True
 
-# Static files (CSS, JavaScript, Images)
-# https://docs.djangoproject.com/en/3.0/howto/static-files/
-
-STATIC_URL = '/static/'
-STATIC_ROOT = os.path.join(BASE_DIR, 'static')
-STATICFILES_DIRS = [
-    os.path.join(PROJECT_DIR, "static"),
-]
-
-MEDIA_URL = '/media/'
-MEDIA_ROOT = os.path.join(BASE_DIR, 'local/media')
-
-CAS_ENABLED = True
-
-try:
-    from local.settings import *
-except ImportError:
-    pass
-
-if CAS_ENABLED:
-    INSTALLED_APPS.append('django_cas_ng')
-    MIDDLEWARE.append('django_cas_ng.middleware.CASMiddleware')
-    AUTHENTICATION_BACKENDS.append('django_cas_ng.backends.CASBackend')
-
-    CAS_SERVER_URL = "https://cas-test.clsi.ca/"
-    CAS_SERVICE_DESCRIPTION = "KeyPIT"
-    CAS_LOGOUT_COMPLETELY = True
-    CAS_CREATE_USER = True
-    CAS_REDIRECT_URL = 'login'
-    CAS_LOGIN_URL_NAME = 'login'
-    CAS_LOGOUT_URL_NAME = 'logout'
-
-PEOPLE_TOKEN = 'd91fa59aab904ec78bee228c3e3af861'
-
-import os
-
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,
@@ -186,3 +143,34 @@ LOGGING = {
         },
     },
 }
+
+# Static files (CSS, JavaScript, Images)
+# https://docs.djangoproject.com/en/3.0/howto/static-files/
+
+STATIC_URL = '/static/'
+STATIC_ROOT = os.path.join(BASE_DIR, 'static')
+STATICFILES_DIRS = [
+    os.path.join(PROJECT_DIR, "static"),
+]
+
+MEDIA_URL = '/media/'
+MEDIA_ROOT = os.path.join(BASE_DIR, 'local/media')
+
+CAS_ENABLED = True
+CAS_SERVER_URL = "https://cas-test.clsi.ca/"
+CAS_SERVICE_DESCRIPTION = "KeyPIT"
+CAS_LOGOUT_COMPLETELY = True
+CAS_CREATE_USER = True
+CAS_REDIRECT_URL = 'login'
+CAS_LOGIN_URL_NAME = 'login'
+CAS_LOGOUT_URL_NAME = 'logout'
+
+try:
+    from local.settings import *
+except ImportError:
+    pass
+
+if CAS_ENABLED:
+    INSTALLED_APPS.append('django_cas_ng')
+    MIDDLEWARE.append('django_cas_ng.middleware.CASMiddleware')
+    AUTHENTICATION_BACKENDS.append('django_cas_ng.backends.CASBackend')

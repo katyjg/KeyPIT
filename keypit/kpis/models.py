@@ -15,6 +15,8 @@ logger = logging.getLogger(__name__)
 
 ADMIN_USERS = getattr(settings, 'ADMIN_USERS', [])
 ADMIN_ROLES = getattr(settings, 'ADMIN_ROLES', [])
+PEOPLE_API = getattr(settings, 'PEOPLE_API', 'https://people.lightsource.ca/api/v2/people/')
+PEOPLE_TOKEN = getattr(settings, 'PEOPLE_TOKEN', 'no token')
 
 
 class Manager(AbstractUser):
@@ -27,13 +29,12 @@ class Manager(AbstractUser):
 
 @receiver(cas_user_authenticated)
 def update_user_roleperms(sender, **kwargs):
-    token = getattr(settings, 'PEOPLE_TOKEN', 'no token')
-    auth_header = {'Authorization': 'Bearer {token}'.format(token=token)}
+    auth_header = {'Authorization': 'Bearer {token}'.format(token=PEOPLE_TOKEN)}
     user = Manager.objects.get(username=kwargs.get('username'))
     if kwargs.get('created'):
         logger.info("New account {} created".format(user.username))
 
-    r = requests.get('https://people.lightsource.ca/api/v2/people/{}/roles'.format(user.username), headers=auth_header)
+    r = requests.get('{api}{username}/roles'.format(api=PEOPLE_API, username=user.username), headers=auth_header)
     if r.status_code == 200:
         roles = [d.get('code') for d in r.json()]
         logger.info('User roles: {}'.format(roles))

@@ -1,0 +1,26 @@
+version: '2'
+services:
+  database:
+    image: postgres-bkup:latest
+    volumes:
+      - ./database:/var/lib/postgresql/data:Z
+      - ./database-init:/docker-entrypoint-initdb.d:Z
+      - ./database-backups:/backups:Z
+    environment:
+      POSTGRES_PASSWORD: '*****secret*****'
+      DATABASE_USER: postgres
+      BACKUP_DATABASE_USER: postgres
+
+    restart: always
+
+  app:
+    image: keypit:latest
+    hostname: keypit.example.com
+    environment:
+      SERVER_NAME: keypit.example.com
+    volumes:
+      - ./app/local:/keypit/local:Z
+      - ./app/certs:/etc/letsencrypt:Z
+    ports:
+      - "443:443"
+    restart: always

@@ -1,6 +1,16 @@
 #!/bin/bash
 
 export SERVER_NAME=${SERVER_NAME:-$(hostname --fqdn)}
+export CERT_PATH=${CERT_PATH:-/etc/letsencrypt/live/${SERVER_NAME}}
+
+# create key if none present
+CERT_KEY=${CERT_PATH}/privkey.pem
+if [ ! -f $CERT_KEY ]; then
+    export CERT_PATH = '/certs'
+    CERT_KEY=${CERT_PATH}/privkey.pem
+    mkdir -p ${CERT_PATH}
+    openssl req -x509 -nodes -newkey rsa:2048 -keyout ${CERT_KEY} -out ${CERT_PATH}/fullchain.pem -subj '/CN=${SERVER_NAME}'
+fi
 
 # Make sure we're not confused by old, incompletely-shutdown httpd
 # context after restarting the container.  httpd won't start correctly
