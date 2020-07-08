@@ -147,7 +147,7 @@ class BeamlineMonth(UserRoleMixin, detail.DetailView):
         month = self.kwargs.pop('month')
 
         entry = models.KPIEntry.objects.filter(month__year=year, month__month=month, beamline=self.object, kpi__pk=OuterRef('pk'))
-        indicators = models.KPI.objects.filter(Q(department__in=self.object.departments()) | Q(department__isnull=True)).annotate(
+        indicators = models.KPI.objects.filter(Q(department__in=self.object.departments()) | Q(beamline=self.object) | Q(department__isnull=True, beamline__isnull=True)).annotate(
             entry=Subquery(entry.values('pk')[:1]),
             value=Subquery(entry.values('value')[:1]),
             comments=Subquery(entry.values('comments')[:1])

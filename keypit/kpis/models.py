@@ -130,6 +130,7 @@ class KPI(models.Model):
     description = models.CharField(max_length=600)
     category = models.ForeignKey(KPICategory, blank=True, null=True, on_delete=models.SET_NULL, related_name='kpis')
     department = models.ForeignKey(Department, blank=True, null=True, on_delete=models.SET_NULL, related_name='kpis')
+    beamline = models.ForeignKey(Beamline, blank=True, null=True, on_delete=models.SET_NULL, related_name='kpis')
     kind = models.IntegerField(choices=TYPE, default=TYPE.SUM)
     priority = models.IntegerField(default=0)
 
@@ -139,6 +140,19 @@ class KPI(models.Model):
     def priority_display(self):
         letter = list(self.category.kpis.order_by('priority')).index(self)
         return "{}{}".format(self.category.priority_display(), string.ascii_lowercase[letter])
+
+    def beamlines(self):
+        bls = []
+        if self.beamline or self.department:
+            if self.beamline:
+                bls.append(self.beamline)
+            if self.department:
+                for bl in Beamline.objects.all():
+                    if self.department in bl.departments():
+                        bls.append(bl)
+        else:
+            bls = [bl for bl in Beamline.objects.all()]
+        return bls
 
     class Meta:
         verbose_name = "Key Performance Indicator"

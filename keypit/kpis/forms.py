@@ -96,9 +96,9 @@ class KPIForm(forms.ModelForm):
 
     class Meta:
         model = KPI
-        fields = ['name', 'description', 'category', 'kind', 'priority', 'department']
+        fields = ['name', 'description', 'category', 'kind', 'priority', 'department', 'beamline']
         widgets = {
-            'description': forms.Textarea(attrs={"cols": 54, "rows": 4}),
+            'description': forms.Textarea(attrs={"cols": 54, "rows": 4, "class": "form-control"}),
         }
 
     def __init__(self, *args, **kwargs):
@@ -121,8 +121,9 @@ class KPIForm(forms.ModelForm):
                 css_class="row"
             ),
             Div(
-                Div('kind', css_class="col-6"),
+                Div('kind', css_class="col-12"),
                 Div('department', css_class="col-6"),
+                Div('beamline', css_class="col-6"),
                 css_class="row"
             )
         )
@@ -175,7 +176,7 @@ class KPIEntryForm(forms.ModelForm):
         model = KPIEntry
         fields = ['value', 'comments', 'beamline', 'kpi', 'month']
         widgets = {
-            'comments': forms.Textarea(attrs={"rows": 4}),
+            'comments': forms.Textarea(attrs={"rows": 4, "class": "form-control"}),
             'beamline': forms.HiddenInput(),
             'kpi': forms.HiddenInput(),
             'month': forms.HiddenInput()
@@ -200,7 +201,7 @@ class KPIEntryForm(forms.ModelForm):
                 'beamline', 'kpi', 'month',
                 HTML("<div class='jumbotron p-3 mb-2 col-12'>{}</div>".format(linebreaksbr(kpi.description))),
                 Div('value', css_class="col-3"),
-                Div('comments', css_class="col-12 w-100"),
+                Div('comments', css_class="col-12"),
                 css_class="row"
             ),
         )
@@ -216,7 +217,7 @@ class KPICategoryForm(forms.ModelForm):
         model = KPICategory
         fields = ['name', 'description', 'priority']
         widgets = {
-            'description': forms.Textarea(attrs={"cols": 54, "rows": 4}),
+            'description': forms.Textarea(attrs={"cols": 54, "rows": 4, "class": "form-control"}),
         }
 
     def __init__(self, *args, **kwargs):

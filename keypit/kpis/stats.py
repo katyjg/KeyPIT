@@ -61,6 +61,7 @@ def beamline_stats(period='month', year=None, **filters):
                                         'comments', output_field=TextField())).values_list('fmt_comments', flat=True)
 
                 kpi_comments = '<br/><br/>'.join(kpi_comment_entries)
+                kpi_comments = linebreaksbr(mark_safe(kpi_comments))
 
                 if kpi.kind != kpi.TYPE.TEXT:
                     # Add plots to the report
