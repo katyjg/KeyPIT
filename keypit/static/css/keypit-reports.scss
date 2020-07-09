@@ -11,23 +11,32 @@
   &.collapse {
     &:not(.show) {
       display: block;
-      height: 7rem;
+      height: 400px;
       overflow: hidden;
     }
     a.more {
       position: absolute;
       bottom: 1em;
       right: 5em;
-      &.collapsed::after  {
+      &.collapsed::after, &:not(.collapsed)::after {
+        color: white;
+        display: inline-block;
+        padding: 0.25em 0.4em;
+        font-size: 75%;
+        border-radius: 0.25rem;
+      }
+      &.collapsed::after {
         content: '+ Show More';
+        background-color: #17a2b8;
       }
 
       &:not(.collapsed)::after {
         content: '- Show Less';
+        background-color: #47243a;
       }
     }
   }
   &.collapsing {
-    height: 7rem;
+    height: 400px;
   }
 }

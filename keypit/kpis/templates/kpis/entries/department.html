@@ -87,7 +87,7 @@
                 data: report
             });
             $('.notes').each(function(i, el) {
-                if($(el).height() > 140) {
+                if($(el).height() > 400) {
                     $(el).attr('id', 'collapse-' + i);
                     $(el).addClass('collapse');
                     $(el).prepend('<a role="button" class="collapsed more" data-toggle="collapse" href="#collapse-' + i + '" aria-expanded="false" aria-controls="collapse' + i + '"></a>');

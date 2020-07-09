@@ -8,17 +8,25 @@
 
 .notes.collapse:not(.show) {
   display: block;
-  height: 7rem;
+  height: 400px;
   overflow: hidden; }
 
 .notes.collapse a.more {
   position: absolute;
   bottom: 1em;
   right: 5em; }
+  .notes.collapse a.more.collapsed::after, .notes.collapse a.more:not(.collapsed)::after {
+    color: white;
+    display: inline-block;
+    padding: 0.25em 0.4em;
+    font-size: 75%;
+    border-radius: 0.25rem; }
   .notes.collapse a.more.collapsed::after {
-    content: '+ Show More'; }
+    content: '+ Show More';
+    background-color: #17a2b8; }
   .notes.collapse a.more:not(.collapsed)::after {
-    content: '- Show Less'; }
+    content: '- Show Less';
+    background-color: #47243a; }
 
 .notes.collapsing {
-  height: 7rem; }
+  height: 400px; }
