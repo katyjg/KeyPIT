@@ -23,15 +23,21 @@ class LandingPage(UserRoleMixin, View):
     """
 
     def dispatch(self, request, *args, **kwargs):
-        beamline = models.Beamline.objects.filter(
-            acronym__icontains=re.search(r'\<beamline-staff:(.*?)\>', self.request.user.user_roles).group(1))
-        if beamline.count() == 1:
-            return HttpResponseRedirect(reverse_lazy('beamline-detail', kwargs={'pk': beamline.first().pk}))
+        try:
+            beamline = models.Beamline.objects.filter(
+                acronym__icontains=re.search(r'\<beamline-staff:(.*?)\>', self.request.user.user_roles).group(1))
+            if beamline.count() == 1:
+                return HttpResponseRedirect(reverse_lazy('beamline-detail', kwargs={'pk': beamline.first().pk}))
+        except:
+            pass
 
-        division = models.Department.objects.filter(
-            acronym__icontains=re.search(r'\<employee:(.*?)\>', self.request.user.user_roles).group(1))
-        if division.count() == 1:
-            return HttpResponseRedirect(reverse_lazy('department-detail', kwargs={'pk': division.first().pk}))
+        try:
+            division = models.Department.objects.filter(
+                acronym__icontains=re.search(r'\<employee:(.*?)\>', self.request.user.user_roles).group(1))
+            if division.count() == 1:
+                return HttpResponseRedirect(reverse_lazy('department-detail', kwargs={'pk': division.first().pk}))
+        except:
+            pass
 
         return HttpResponseRedirect(reverse_lazy('dashboard'))
 

@@ -176,7 +176,7 @@ class KPIEntryForm(forms.ModelForm):
         model = KPIEntry
         fields = ['value', 'comments', 'beamline', 'kpi', 'month']
         widgets = {
-            'comments': forms.Textarea(attrs={"rows": 4, "class": "form-control"}),
+            'comments': forms.Textarea(attrs={"rows": 8, "class": "form-control"}),
             'beamline': forms.HiddenInput(),
             'kpi': forms.HiddenInput(),
             'month': forms.HiddenInput()
@@ -200,7 +200,7 @@ class KPIEntryForm(forms.ModelForm):
             Div(
                 'beamline', 'kpi', 'month',
                 HTML("<div class='jumbotron p-3 mb-2 col-12'>{}</div>".format(linebreaksbr(kpi.description))),
-                Div('value', css_class="col-3"),
+                Div(Field('value', css_class="form-control"), css_class="col-3"),
                 Div('comments', css_class="col-12"),
                 css_class="row"
             ),
