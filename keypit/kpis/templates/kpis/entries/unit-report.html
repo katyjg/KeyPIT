@@ -1,4 +1,4 @@
-{% extends "kpis/entries/beamline.html" %}
+{% extends "kpis/entries/unit.html" %}
 
 {% load icons %}
 {% load date_tags %}
@@ -25,7 +25,7 @@
                     </div>
                     {% if owner and not kpi.entry %}
                         <div class="tools-box ml-auto">
-                            <a href="#!"  data-form-link="{% url "kpientry-new" %}?beamline={{ beamline.pk }}&kpi={{ kpi.pk }}&month={{ year }}-{{ month }}" title="Add information">
+                            <a href="#!"  data-form-link="{% url "kpientry-new" %}?unit={{ unit.pk }}&kpi={{ kpi.pk }}&month={{ year }}-{{ month }}" title="Add information">
                                 {% show_icon label='Add' icon='ti ti-md ti-plus' color='info' %}
                             </a>
                         </div>

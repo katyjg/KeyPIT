@@ -4,6 +4,7 @@ chardet==3.0.4
 Django==3.0.7
 django-cas-ng
 django-crispy-forms==1.9.1
+django-cte
 django-debug-toolbar==2.2
 django-itemlist==0.2.6
 django-memoize==2.3.1

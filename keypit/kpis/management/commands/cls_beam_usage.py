@@ -6,7 +6,7 @@ from datetime import datetime, timedelta
 import pytz
 import requests
 
-from keypit.kpis.models import Beamline, KPI, KPIEntry
+from keypit.kpis.models import Unit, KPI, KPIEntry
 
 USO_API = getattr(settings, 'USO_API', 'https://user.lightsource.ca/api/v1/')
 
@@ -16,7 +16,7 @@ TOTAL_SHIFTS_USED = 9
 
 def format_localtime(dt):
     return datetime.strftime(timezone.localtime(dt), '%Y-%m-%dT%H')
-    return datetime.strftime(timezone.localtime(pytz.utc.localize(dt)), '%Y-%m-%dT%H')
+    #return datetime.strftime(timezone.localtime(pytz.utc.localize(dt)), '%Y-%m-%dT%H')
 
 
 class Command(BaseCommand):
@@ -54,12 +54,12 @@ class Command(BaseCommand):
                     st += timedelta(hours=8)
         n_shifts = set(n_shifts)
 
-        for beamline in Beamline.objects.all():
+        for unit in Unit.tree.filter(kind__name="Beamline"):
             bl_n_shifts = 0
             bl_used_shifts = 0
-            for bl in beamline.beamline_acronyms():
+            for acronym in unit.beamline_acronyms():
                 # Import Facility Schedule(s)
-                url = "{}schedule/beamtime/{}/?start={}&end={}".format(USO_API, bl, qstart, qend)
+                url = "{}schedule/beamtime/{}/?start={}&end={}".format(USO_API, acronym, qstart, qend)
                 r = requests.get(url)
                 if r.status_code == 200:
                     visits = [s for s in r.json() if not s['cancelled']]
@@ -72,14 +72,11 @@ class Command(BaseCommand):
                             st += timedelta(hours=8)
                 else:
                     shifts = []
-                    print("Schedule not found for {}".format(bl))
+                    print("Schedule not found for {}".format(acronym))
                 bl_n_shifts += len(n_shifts)
                 bl_used_shifts += len(n_shifts.intersection(set(shifts)))
-                #percent_used = n_shifts and 100. * used_shifts / len(n_shifts) or 0
 
-                #KPIEntry.objects.filter(beamline=bl, month=start.date(), kpi__id=BEAMLINE_AVAILABILITY, defaults={'value': percent_used})
-
-            KPIEntry.objects.update_or_create(beamline=beamline, month=start, kpi=KPI.objects.get(pk=TOTAL_NORMAL_SHIFTS),
+            KPIEntry.objects.update_or_create(unit=unit, month=start, kpi=KPI.objects.get(pk=TOTAL_NORMAL_SHIFTS),
                                               defaults={'value': bl_n_shifts})
-            KPIEntry.objects.update_or_create(beamline=beamline, month=start.date(), kpi=KPI.objects.get(pk=TOTAL_SHIFTS_USED),
+            KPIEntry.objects.update_or_create(unit=unit, month=start.date(), kpi=KPI.objects.get(pk=TOTAL_SHIFTS_USED),
                                               defaults={'value': bl_used_shifts})

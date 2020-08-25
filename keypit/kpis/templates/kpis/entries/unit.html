@@ -5,22 +5,26 @@
 
 {% block page_heading %}
     <h3 class="text-condensed text-muted">
-        {% for dept in object.departments reversed %}
-            <a href="{% url 'department-detail' dept.pk %}" title="{{ dept.name }}">{{ dept }}</a> <span class="ti ti-sm ti-angle-right"></span>
+        {% for dept in object.ancestors %}
+            <a href="{% url 'unit-detail' dept.pk %}" title="{{ dept.name }}">{{ dept }}</a> <span class="ti ti-sm ti-angle-right"></span>
         {% endfor %}
-        <span class="text-dark">{{ object.acronym|upper }}</span> |
+        <span class="text-dark">{{ object.acronym|upper }} {{ object.kind.name }}</span> |
         <span class="text-dark">
             <strong>{% if month %}{{ month|month_name }} {% elif quarter %}Q{{ quarter }} {% endif %}{% if year %}{{ year }}{% else %}{{ object.name }}{% endif %}</strong>
         </span>
     </h3>
+
     <span class="text-muted">
-        <strong>1</strong> of <strong>{{ object.department.beamlines.count }}</strong> Beamline{{ object.department.beamlines.count|pluralize }} in {{ object.department.name }}
+        {% if object.parent %}
+            <strong>1</strong> of <strong>{{ object.parent.children.count }}</strong> Unit{{ object.parent.children.count|pluralize }} in {{ object.parent.name }}
+        {% endif %}
     </span>
+
 {% endblock %}
 
 {% block object_tools %}
     {% if owner %}
-        <a href="#!" data-form-link="{% url 'beamline-edit' object.pk %}">
+        <a href="#!" data-form-link="{% url 'unit-edit' object.pk %}">
             {% show_icon label='Edit' icon='ti ti-md ti-pencil-alt' %}
         </a>
     {% endif %}
@@ -32,40 +36,49 @@
             <div class="col-5">
                 <h5 class="my-0 p-2">
                 <span class="text-normal text-condensed text-muted">Year: </span>
-                <a href="{% url "beamline-detail" object.pk %}" class="border-right pr-2 mx-1"><span class="px-0 badge badge-{% if year %}info{% else %}primary{% endif %}">&emsp;All&emsp;</span></a>
+                <a href="{% url "unit-detail" object.pk %}" class="border-right pr-2 mx-1"><span class="px-0 badge badge-{% if year %}info{% else %}primary{% endif %}">&emsp;All&emsp;</span></a>
                 {% for yr in years %}
-                    <a href="{% if period != 'year' and period %}{% url "beamline-year" object.pk yr period %}{% else %}{% url "beamline-year" object.pk yr 'month' %}{% endif %}"><span class="badge badge-{% if yr == year %}primary{% else %}info{% endif %}">{{ yr }}</span></a>
+                    <a href="{% if period != 'year' and period %}{% url "unit-year" object.pk yr period %}{% else %}{% url "unit-year" object.pk yr 'month' %}{% endif %}"><span class="badge badge-{% if yr == year %}primary{% else %}info{% endif %}">{{ yr }}</span></a>
                 {% endfor %}
                 </h5>
                 {% if year %}
                     <h5 class="my-0 pt-0 px-2 pb-2">
                         <span class="text-normal text-condensed text-muted">Data: </span>
-                        <a href="{% url "beamline-year" object.pk year 'month' %}">
+                        <a href="{% url "unit-year" object.pk year 'month' %}">
                             <span class="badge badge-{% if period == 'month' %}primary{% else %}info{% endif %}">Monthly</span>
                         </a>
-                        <a href="{% url "beamline-year" object.pk year 'quarter' %}">
+                        <a href="{% url "unit-year" object.pk year 'quarter' %}">
                             <span class="badge badge-{% if period == 'quarter' and not quarter %}primary{% else %}info{% endif %}">Quarterly</span>
                         </a>
                     </h5>
                 {% endif %}
             </div>
             <div class="col-7 text-right">
-                {% if year %}
+                {% if object.children.all %}
+                  {% for kind, us in units.items %}
+                    <h5 class="my-0 {% if forloop.first %}p-2{% else %}pt-0 px-2 pb-2{% endif %}">
+                        <span class="text-normal text-condensed text-muted">{{ kind }}: </span>
+                        {% for unit in us %}
+                            <a href="{% url "unit-detail" unit.pk %}">
+                                <span class="badge badge-info" title="{{ unit.name }}">{{ unit.acronym }}</span>
+                            </a>
+                        {% endfor %}&nbsp;
+                    </h5>
+                  {% endfor %}
+                {% endif %}
+                {% if year and object.reporter %}
                     <h5 class="my-0 p-2">
                         <span class="text-normal text-condensed text-muted">Month: </span>
                         {% for mt in 12|rangelist %}
-                            <a href="{% url "beamline-month" object.pk year mt %}">
-                                <span class="badge badge-{% if mt == month %}primary{% elif mt in months %}info{% else %}secondary{% endif %}">{{ mt|month_abbr }}</span></a>
-                        {% endfor %}
-                    </h5>
-                    <h5 class="my-0 pb-2 px-2 pt-0">
-                        <span class="text-normal text-condensed text-muted">Quarter: </span>
-                        {% for qt in 4|rangelist %}
-                            <a href="{% url "beamline-quarter" object.pk year qt %}"><span class="badge badge-{% if qt == quarter %}primary{% elif qt in quarters %}info{% else %}secondary{% endif %}">Q{{ qt }}</span></a>
+                            <a href="{% url "unit-report" object.pk year mt %}">
+                                <span class="badge badge-{% if mt == month %}primary{% elif mt in months %}info{% else %}secondary{% endif %}">{{ mt|month_abbr }}</span>
+                            </a>
                         {% endfor %}
                     </h5>
                 {% endif %}
             </div>
+
+
         </div>
     </div>
 {% endblock %}

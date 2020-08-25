@@ -1,16 +1,15 @@
 from django.contrib.messages.views import SuccessMessageMixin
-from django.db.models import Q, Count, Subquery, OuterRef
-from django.http import JsonResponse, HttpResponseRedirect
+from django.db.models import Subquery, OuterRef
+from django.http import HttpResponseRedirect, Http404
 from django.template.defaultfilters import linebreaksbr
 from django.urls import reverse_lazy
 from django.views.generic import edit, detail, View
 
 from itemlist.views import ItemListView
 from datetime import datetime
-import re
 
-from keypit.kpis import models, forms, stats
-from keypit.kpis.mixins import OwnerRequiredMixin, AdminRequiredMixin, ReportViewMixin, AsyncFormMixin, ListViewMixin, UserRoleMixin
+from keypit.kpis import models, forms
+from keypit.mixins.views import *
 
 
 def format_description(val, record):
@@ -24,18 +23,10 @@ class LandingPage(UserRoleMixin, View):
 
     def dispatch(self, request, *args, **kwargs):
         try:
-            beamline = models.Beamline.objects.filter(
-                acronym__icontains=re.search(r'\<beamline-staff:(.*?)\>', self.request.user.user_roles).group(1))
-            if beamline.count() == 1:
-                return HttpResponseRedirect(reverse_lazy('beamline-detail', kwargs={'pk': beamline.first().pk}))
-        except:
-            pass
-
-        try:
-            division = models.Department.objects.filter(
-                acronym__icontains=re.search(r'\<employee:(.*?)\>', self.request.user.user_roles).group(1))
-            if division.count() == 1:
-                return HttpResponseRedirect(reverse_lazy('department-detail', kwargs={'pk': division.first().pk}))
+            unit = models.Unit.tree.filter(admin_roles__overlap=self.request.user.roles())
+            #acronym__icontains=re.search(r'\<beamline-staff:(.*?)\>', self.request.user.user_roles).group(1))
+            if unit.count() == 1:
+                return HttpResponseRedirect(reverse_lazy('unit-detail', kwargs={'pk': unit.first().pk}))
         except:
             pass
 
@@ -59,115 +50,83 @@ class Dashboard(UserRoleMixin, detail.DetailView):
 
     def get_context_data(self, **kwargs):
         context = super(Dashboard, self).get_context_data(**kwargs)
-        divisions = models.Department.objects.filter(division__isnull=True).annotate(beamline_count=Count('beamlines'), department_count=Count('departments'))
-        departments = models.Department.objects.filter(division__isnull=False)
-        context.update(divisions=divisions)
-        context.update(departments=departments)
-        context.update(beamlines=models.Beamline.objects.all())
-
+        units = {
+            kind.name: models.Unit.tree.filter(kind=kind) for kind in models.UnitType.objects.all()
+        }
+        context['units'] = {k: v for k, v in units.items() if v}
         return context
 
 
-class DepartmentList(UserRoleMixin, ListViewMixin, ItemListView):
-    model = models.Department
-    list_filters = ['division']
-    list_columns = ['acronym', 'name', 'division']
+class UnitList(UserRoleMixin, ListViewMixin, ItemListView):
+    model = models.Unit
+    list_filters = ['parent', ]
+    list_columns = ['acronym', 'name', 'kind__name', 'parent']
     list_search = ['name', 'acronym']
-    link_url = 'department-detail'
-    add_url = 'new-department'
+    link_url = 'unit-detail'
+    add_url = 'new-unit'
     link_data = False
     tool_template = 'kpis/components/kpi-list-tools.html'
-    ordering = ['-division',]
+    ordering = ['parent', ]
     paginate_by = 25
 
 
-class DepartmentDetail(UserRoleMixin, ReportViewMixin, detail.DetailView):
-    model = models.Department
-    template_name = "kpis/entries/department.html"
-
-    def get_filters(self):
-        filters = {'beamline__department': self.object}
-        if self.object.is_division():
-            filters = {'beamline__department__division': self.object}
-        return filters
-
-
-class DepartmentCreate(AdminRequiredMixin, SuccessMessageMixin, AsyncFormMixin, edit.CreateView):
-    form_class = forms.DepartmentForm
-    template_name = "modal/form.html"
-    model = models.Department
-    success_url = reverse_lazy('department-list')
-    success_message = "Department has been created"
-
-
-class DepartmentEdit(AdminRequiredMixin, SuccessMessageMixin, AsyncFormMixin, edit.UpdateView):
-    form_class = forms.DepartmentForm
-    template_name = "modal/form.html"
-    model = models.Department
-    success_url = reverse_lazy('department-list')
-    success_message = "Department has been updated"
-
-
-class BeamlineList(UserRoleMixin, ListViewMixin, ItemListView):
-    model = models.Beamline
-    list_filters = ['department',]
-    list_columns = ['acronym', 'name', 'department']
-    list_search = ['name', 'acronym']
-    link_url = 'beamline-detail'
-    add_url = 'new-beamline'
-    link_data = False
-    tool_template = 'kpis/components/kpi-list-tools.html'
-    ordering = ['department',]
-    paginate_by = 25
-
-
-class BeamlineDetail(UserRoleMixin, ReportViewMixin, detail.DetailView):
-    model = models.Beamline
-    template_name = "kpis/entries/beamline.html"
+class UnitDetail(UserRoleMixin, ReportViewMixin, detail.DetailView):
+    model = models.Unit
+    template_name = "kpis/entries/unit.html"
 
     def owner_roles(self):
-        return ['{}:'.format(r) + self.get_object().acronym.lower() for r in
-                ['beamline-admin', 'beamline-responsible', 'beamline-staff']]
+        return self.get_object().owner_roles()
 
     def get_filters(self):
-        return {'beamline': self.object}
+        return {'unit__in': [self.object] + list(self.object.descendants())}
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        units = {
+            kind.name: models.Unit.tree.filter(pk__in=self.object.children.values_list('pk', flat=True), kind=kind)
+            for kind in models.UnitType.objects.all()
+        }
+        context['units'] = {k: v for k, v in units.items() if v}
+        return context
 
 
-class BeamlineQuarter(BeamlineDetail):
+class UnitReport(UserRoleMixin, detail.DetailView):
+    model = models.Unit
+    template_name = "kpis/entries/unit-report.html"
 
-    def get_filters(self):
-        return {'beamline': self.object}
-
-
-class BeamlineMonth(UserRoleMixin, detail.DetailView):
-    model = models.Beamline
-    template_name = "kpis/entries/beamline-month.html"
+    def dispatch(self, request, *args, **kwargs):
+        if not self.get_object().reporter():
+            raise Http404()
+        return super().dispatch(request, *args, **kwargs)
 
     def owner_roles(self):
-        return ['{}:{}'.format(r, self.get_object().acronym.lower()) for r in
-                ['beamline-admin', 'beamline-responsible', 'beamline-staff']]
+        return self.get_object().owner_roles()
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         year = self.kwargs.pop('year')
         month = self.kwargs.pop('month')
 
-        entry = models.KPIEntry.objects.filter(month__year=year, month__month=month, beamline=self.object, kpi__pk=OuterRef('pk'))
-        indicators = models.KPI.objects.filter(Q(department__in=self.object.departments()) | Q(beamline=self.object) | Q(department__isnull=True, beamline__isnull=True)).annotate(
+        entry = models.KPIEntry.objects.filter(
+            month__year=year, month__month=month, unit=self.object, kpi__pk=OuterRef('pk'))
+        indicators = models.KPI.objects.filter(
+            units__pk__in=[self.object.pk] + list(self.object.ancestors().values_list('pk', flat=True))).annotate(
             entry=Subquery(entry.values('pk')[:1]),
             value=Subquery(entry.values('value')[:1]),
             comments=Subquery(entry.values('comments')[:1])
         )
 
-        entries = self.object.entries.filter(month__year=year, month__month=month).order_by('kpi__category__priority', 'kpi__priority')
-        categories = models.KPICategory.objects.filter(pk__in=entries.values_list('kpi__category__id', flat=True).distinct())
+        entries = self.object.entries.filter(
+            month__year=year, month__month=month).order_by('kpi__category__priority', 'kpi__priority')
+        categories = models.KPICategory.objects.filter(
+            pk__in=entries.values_list('kpi__category__id', flat=True).distinct())
         context['categories'] = {
             cat: entries.filter(kpi__category=cat) for cat in categories
         }
         if entries.filter(kpi__category__isnull=True).exists():
             context['categories']['Other'] = entries.filter(kpi__category__isnull=True)
 
-        filters = {'month__year': year, 'beamline': self.object}
+        filters = {'month__year': year, 'unit': self.object}
         context['years'] = stats.get_data_periods(period='year')
         context['months'] = stats.get_data_periods(period='month', **filters)
         context['quarters'] = stats.get_data_periods(period='quarter', **filters)
@@ -185,64 +144,23 @@ class BeamlineMonth(UserRoleMixin, detail.DetailView):
         return context
 
 
-class BeamlineCreate(AdminRequiredMixin, SuccessMessageMixin, AsyncFormMixin, edit.CreateView):
-    form_class = forms.BeamlineForm
+class UnitCreate(AdminRequiredMixin, SuccessMessageMixin, AsyncFormMixin, edit.CreateView):
+    form_class = forms.UnitForm
     template_name = "modal/form.html"
-    model = models.Beamline
-    success_url = reverse_lazy('beamline-list')
-    success_message = "Beamline has been created"
+    model = models.Unit
+    success_url = reverse_lazy('unit-list')
+    success_message = "Unit has been created"
 
 
-class BeamlineEdit(OwnerRequiredMixin, SuccessMessageMixin, AsyncFormMixin, edit.UpdateView):
-    form_class = forms.BeamlineForm
+class UnitEdit(OwnerRequiredMixin, SuccessMessageMixin, AsyncFormMixin, edit.UpdateView):
+    form_class = forms.UnitForm
     template_name = "modal/form.html"
-    model = models.Beamline
-    success_url = reverse_lazy('beamline-list')
-    success_message = "Beamline has been updated"
+    model = models.Unit
+    success_url = reverse_lazy('unit-list')
+    success_message = "Unit has been updated"
 
     def owner_roles(self):
-        return ['{}:{}'.format(r, self.get_object().acronym.lower())
-                for r in ['beamline-admin', 'beamline-responsible', 'beamline-staff']]
-
-
-class BeamlineCreateMonth(OwnerRequiredMixin, SuccessMessageMixin, AsyncFormMixin, edit.CreateView):
-    form_class = forms.BeamlineMonthForm
-    template_name = "modal/form.html"
-    model = models.KPIEntry
-    success_url = reverse_lazy('dashboard')
-    success_message = "Beamline report has been created"
-
-    def owner_roles(self):
-        bl = models.Beamline.objects.get(pk=self.kwargs.get('pk'))
-        return ['{}:'.format(r) + bl.acronym.lower()
-                for r in ['beamline-admin', 'beamline-responsible', 'beamline-staff']]
-
-    def get_initial(self):
-        initial = super().get_initial()
-        initial['beamline'] = models.Beamline.objects.get(pk=self.kwargs.get('pk'))
-        return initial
-
-    def get_success_url(self):
-        success_url = reverse_lazy('beamline-month', kwargs={'pk': self.beamline.pk, 'year': self.dt.year, 'month': self.dt.month})
-        return success_url
-
-    def form_valid(self, form):
-        self.dt = datetime(form.cleaned_data['year'], form.cleaned_data['month'], 1).date()
-        self.beamline = form.cleaned_data['beamline']
-        for kpi in models.KPI.objects.filter(Q(department__in=self.beamline.departments()) | Q(department__isnull=True)):
-            models.KPIEntry.objects.get_or_create(beamline=self.beamline, month=self.dt, kpi=kpi)
-
-        return JsonResponse({'url': self.get_success_url()}, safe=False)
-
-
-class BeamlineCreateThisMonth(BeamlineCreateMonth):
-
-    def get_initial(self):
-        initial = super().get_initial()
-        initial['beamline'] = models.Beamline.objects.get(pk=self.kwargs.get('pk'))
-        initial['year'] = self.kwargs.get('year')
-        initial['month'] = self.kwargs.get('month')
-        return initial
+        return self.get_object().owner_roles()
 
 
 class KPIList(UserRoleMixin, ListViewMixin, ItemListView):
@@ -324,21 +242,22 @@ class KPIEntryCreate(OwnerRequiredMixin, SuccessMessageMixin, AsyncFormMixin, ed
 
     def get_initial(self):
         initial = super().get_initial()
-        initial['beamline'] = models.Beamline.objects.filter(pk=self.request.GET.get('beamline')).first()
+        initial['unit'] = models.Unit.tree.filter(pk=self.request.GET.get('unit')).first()
         initial['kpi'] = models.KPI.objects.filter(pk=self.request.GET.get('kpi', self.request.POST.get('kpi'))).first()
-        initial['month'] = self.request.GET.get('month') and datetime.strptime('{}-1'.format(self.request.GET.get('month')), '%Y-%m-%d').date() or self.request.POST.get('month')
+        initial['month'] = self.request.GET.get('month') and datetime.strptime(
+            '{}-1'.format(self.request.GET.get('month')), '%Y-%m-%d').date() or self.request.POST.get('month')
         return initial
 
     def get_success_url(self):
-        success_url = reverse_lazy('beamline-month', kwargs={'pk': self.object.beamline.pk, 'year': self.object.month.year,
-                                           'month': self.object.month.month})[:-1] + '#{}'.format(self.object.kpi.name)
+        success_url = reverse_lazy('unit-report', kwargs={
+            'pk': self.object.unit.pk, 'year': self.object.month.year,
+            'month': self.object.month.month})[:-1] + '#{}'.format(self.object.kpi.name)
         return success_url
 
     def owner_roles(self):
-        beamline_pk = self.request.GET.get('beamline', self.request.POST.get('beamline'))
-        beamline = models.Beamline.objects.filter(pk=beamline_pk).first()
-        return ['{}:{}'.format(r, beamline.acronym.lower()) for r in
-                ['beamline-admin', 'beamline-responsible', 'beamline-staff']]
+        unit_pk = self.request.GET.get('unit', self.request.POST.get('unit'))
+        unit = models.Unit.tree.filter(pk=unit_pk).first()
+        return unit.owner_roles()
 
 
 class KPIEntryEdit(OwnerRequiredMixin, SuccessMessageMixin, AsyncFormMixin, edit.UpdateView):
@@ -349,10 +268,10 @@ class KPIEntryEdit(OwnerRequiredMixin, SuccessMessageMixin, AsyncFormMixin, edit
     success_message = "KPI information has been updated"
 
     def get_success_url(self):
-        success_url = reverse_lazy('beamline-month', kwargs={'pk': self.object.beamline.pk, 'year': self.object.month.year,
-                                           'month': self.object.month.month})[:-1] + '#{}'.format(self.object.kpi.name)
+        success_url = reverse_lazy('unit-report', kwargs={
+            'pk': self.object.unit.pk, 'year': self.object.month.year,
+            'month': self.object.month.month})[:-1] + '#{}'.format(self.object.kpi.name)
         return success_url
 
     def owner_roles(self):
-        return ['{}:{}'.format(r, self.get_object().beamline.acronym.lower()) for r in
-                ['beamline-admin', 'beamline-responsible', 'beamline-staff']]
+        return self.get_object().unit.owner_roles()

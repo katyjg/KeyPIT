@@ -1,11 +1,13 @@
 from django.db import models
 from django.conf import settings
 from django.contrib.auth.models import AbstractUser
+from django.contrib.postgres.fields import ArrayField
 from django.dispatch import receiver
 from django.utils.translation import ugettext as _
 
 from django_cas_ng.signals import cas_user_authenticated
 
+from keypit.mixins.models import TreeModel
 from model_utils import Choices
 import requests
 import string
@@ -24,7 +26,7 @@ class Manager(AbstractUser):
     user_roles = models.TextField(blank=True, null=True)
 
     def roles(self):
-        return self.user_roles and self.user_roles.split(',') or []
+        return self.user_roles and self.user_roles.replace('<', '').replace('>', '').split(',') or []
 
 
 @receiver(cas_user_authenticated)
@@ -38,65 +40,49 @@ def update_user_roleperms(sender, **kwargs):
     if r.status_code == 200:
         roles = [d.get('code') for d in r.json()]
         logger.info('User roles: {}'.format(roles))
-        user.user_roles = ','.join(['<{}>'.format(role) for role in roles])
+        user.user_roles = ','.join(['{}'.format(role) for role in roles])
         user.save()
 
-    if user.username in ADMIN_USERS or any(['<{}>'.format(r) in user.roles() for r in ADMIN_ROLES]):
+    if user.username in ADMIN_USERS or any(['{}'.format(r) in user.roles() for r in ADMIN_ROLES]):
         logger.info('User {} is superuser'.format(user.username))
         user.is_superuser = True
         user.is_staff = True
         user.save()
 
 
-class Department(models.Model):
-    """
-    A Department object is a collection of one or more beamlines.
-    """
-    name = models.CharField(max_length=600)
-    acronym = models.CharField(max_length=50)
-    division = models.ForeignKey('self', blank=True, null=True, on_delete=models.SET_NULL, related_name="departments")
+class UnitType(models.Model):
+    name = models.CharField(_('Name'), max_length=50)
+    description = models.TextField(blank=True)
+    reporter = models.BooleanField(default=True)
 
     def __str__(self):
-        return self.acronym
-
-    def is_division(self):
-        return self.departments.exists()
-
-    def divisions(self):
-        dept = self.division
-        depts = []
-        if dept:
-            depts.append(dept)
-            while dept.division:
-                depts.append(dept.division)
-                dept = dept.division
-                if self == dept:
-                    break
-        return depts
+        return self.name
 
 
-class Beamline(models.Model):
+class Unit(TreeModel):
     """
-    A Beamline object should be created for every unique facility that will be tracking KPIs,
+    A Unit object should be created for every unique facility that will be tracking KPIs,
     """
     name = models.CharField(max_length=600)
     acronym = models.CharField(max_length=50)
-    department = models.ForeignKey(Department, blank=True, null=True, on_delete=models.SET_NULL, related_name="beamlines")
-    beamlines = models.CharField(max_length=200, blank=True, null=True)
+    kind = models.ForeignKey(UnitType, on_delete=models.SET_NULL, null=True)
+    parent = models.ForeignKey(
+        'self', null=True, blank=True, related_name='children', verbose_name=_('Parent'), on_delete=models.SET_NULL
+    )
+    acronyms = models.CharField(_('USO Acronyms'), max_length=200, blank=True, null=True)
+    admin_roles = ArrayField(models.CharField(max_length=200), blank=True, default=list)
 
     def __str__(self):
         return self.acronym
 
     def beamline_acronyms(self):
-        return self.beamlines and [ba.strip() for ba in self.beamlines.split(',')] or [self.acronym]
+        return self.acronyms and [ba.strip() for ba in self.acronyms.split(',')] or [self.acronym]
 
-    def departments(self):
-        dept = self.department
-        depts = []
-        if dept:
-            depts.append(dept)
-            depts += dept.divisions()
-        return depts
+    def owner_roles(self):
+        return self.admin_roles
+
+    def reporter(self):
+        return self.kind.reporter
 
 
 class KPICategory(models.Model):
@@ -114,12 +100,12 @@ class KPICategory(models.Model):
     class Meta:
         verbose_name = "Category"
         verbose_name_plural = "Categories"
-        ordering = ['priority',]
+        ordering = ['priority', ]
 
 
 class KPI(models.Model):
     """
-    A Key Performance Indicator to be tracked monthly for a beamline.
+    A Key Performance Indicator to be tracked monthly for a beamline or other organizational unit.
     """
     TYPE = Choices(
         (0, 'AVERAGE', _('Average')),
@@ -129,8 +115,7 @@ class KPI(models.Model):
     name = models.CharField(max_length=250)
     description = models.CharField(max_length=600)
     category = models.ForeignKey(KPICategory, blank=True, null=True, on_delete=models.SET_NULL, related_name='kpis')
-    department = models.ForeignKey(Department, blank=True, null=True, on_delete=models.SET_NULL, related_name='kpis')
-    beamline = models.ForeignKey(Beamline, blank=True, null=True, on_delete=models.SET_NULL, related_name='kpis')
+    units = models.ManyToManyField(Unit, blank=True)
     kind = models.IntegerField(choices=TYPE, default=TYPE.SUM)
     priority = models.IntegerField(default=0)
 
@@ -141,35 +126,25 @@ class KPI(models.Model):
         letter = list(self.category.kpis.order_by('priority')).index(self)
         return "{}{}".format(self.category.priority_display(), string.ascii_lowercase[letter])
 
-    def beamlines(self):
-        bls = []
-        if self.beamline or self.department:
-            if self.beamline:
-                bls.append(self.beamline)
-            if self.department:
-                for bl in Beamline.objects.all():
-                    if self.department in bl.departments():
-                        bls.append(bl)
-        else:
-            bls = [bl for bl in Beamline.objects.all()]
-        return bls
+    def reporting_units(self):
+        return set([i for subunits in [u.descendants() for u in self.units.all()] for i in subunits])
 
     class Meta:
         verbose_name = "Key Performance Indicator"
-        ordering = ['category__priority', 'priority',]
+        ordering = ['category__priority', 'priority', ]
 
 
 class KPIEntry(models.Model):
     kpi = models.ForeignKey(KPI, on_delete=models.CASCADE, related_name="entries")
-    beamline = models.ForeignKey(Beamline, on_delete=models.CASCADE, related_name="entries")
+    unit = models.ForeignKey(Unit, on_delete=models.CASCADE, related_name="entries")
     month = models.DateField()
     value = models.IntegerField(null=True, blank=True)
     comments = models.TextField(null=True, blank=True)
 
     def __str__(self):
-        return "{}:{} | {}".format(self.beamline.acronym, self.month, self.kpi)
+        return "{}:{} | {}".format(self.unit.acronym, self.month, self.kpi)
 
     class Meta:
         verbose_name = "KPI Entry"
         verbose_name_plural = "KPI Entries"
-        unique_together = ['kpi', 'beamline', 'month']
+        unique_together = ['kpi', 'unit', 'month']

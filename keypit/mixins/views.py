@@ -81,15 +81,15 @@ class ReportViewMixin(object):
         if year:
             filters.update({'month__year': year})
             report_ctx['year'] = year
-            for per in ['month', 'quarter']:
+            for per in ['month']:
                 report_ctx['{}s'.format(per)] = stats.get_data_periods(period=per, **filters)
             if self.kwargs.get('quarter'):
                 period = 'month'
                 report_ctx['quarter'] = self.kwargs.get('quarter')
                 filters.update({'month__quarter': self.kwargs.get('quarter')})
-            report_ctx['report'] = stats.beamline_stats(period=period, year=year, **filters)
+            report_ctx['report'] = stats.unit_stats(period=period, year=year, **filters)
         else:
-            report_ctx['report'] = stats.beamline_stats(period='year', **filters)
+            report_ctx['report'] = stats.unit_stats(period='year', **filters)
 
         report_ctx['period'] = period
 

@@ -26,10 +26,10 @@ class MonthCast(Func):
    template = '%(function)s(%(expressions)s, \'Month YYYY\')'
 
 
-def beamline_stats(period='month', year=None, **filters):
+def unit_stats(period='month', year=None, **filters):
     field = 'month__{}'.format(period)
     entries = KPIEntry.objects.filter(**filters)
-    beamlines = len(entries.values_list('beamline', flat=True).distinct()) > 1
+    units = len(entries.values_list('unit', flat=True).distinct()) > 1
 
     if entries.count():
         categories = entries.values('kpi__category', 'kpi__category__name', 'kpi__category__description').distinct().order_by('kpi__category__priority')
@@ -55,9 +55,9 @@ def beamline_stats(period='month', year=None, **filters):
                 kpi_filters.update({'kpi': kpi})
                 kpi_entries = kpi.entries.filter(**kpi_filters)
 
-                kpi_comment_entries = kpi_entries.exclude(comments="").exclude(comments__isnull=True).order_by('-month', 'beamline__department', 'beamline').annotate(
+                kpi_comment_entries = kpi_entries.exclude(comments="").exclude(comments__isnull=True).order_by('-month', 'unit__parent', 'unit').annotate(
                     str_month=MonthCast('month', output_field=TextField())).annotate(
-                    fmt_comments=Concat(Value('<strong>'), beamlines and 'beamline__acronym' or Value(''), Value(' '), 'str_month', Value('</strong><br/>'),
+                    fmt_comments=Concat(Value('<strong>'), units and 'unit__acronym' or Value(''), Value(' '), 'str_month', Value('</strong><br/>'),
                                         'comments', output_field=TextField())).values_list('fmt_comments', flat=True)
 
                 kpi_comments = '<br/><br/>'.join(kpi_comment_entries)

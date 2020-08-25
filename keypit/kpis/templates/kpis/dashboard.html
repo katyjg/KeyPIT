@@ -19,41 +19,22 @@
 {% block object_status %}
     <div class="status-bar hidden-print">
         <div class="row">
-
+          {% for kind, us in units.items %}
             <div class="col-12">
-                <h5 class="my-0 p-2 row">
+                <h5 class="my-0 {% if forloop.first %}p-2{% else %}px-2 pb-2 pt-0{% endif %} row">
                     <div class="col-2">
-                    <span class="text-normal text-condensed text-muted">Department: </span></div>
-                    <div class="col-10">{% for department in departments %}
-                        <a href="{% url "department-detail" department.pk %}" title="{{ department.name }}">
-                            <span class="badge badge-info">{{ department.acronym }}</span>
+                    <span class="text-normal text-condensed text-muted">{{ kind }}: </span></div>
+                    <div class="col-10">{% for unit in us %}
+                        <a href="{% url "unit-detail" unit.pk %}" title="{{ unit.name }}">
+                            <span class="badge badge-info">{{ unit.acronym }}</span>
                         </a>
                     {% endfor %}&nbsp;</div>
                 </h5>
             </div>
-                    <div class="col-12">
-                <h5 class="my-0 px-2 pb-2 pt-0 row">
-                <div class="col-2">
-                    <span class="text-normal text-condensed text-muted">Beamline: </span></div><div class="col-10">
-                    {% for bl in beamlines %}
-                        <a href="{% url "beamline-detail" bl.pk %}" title="{{ bl.name }}">
-                            <span class="badge badge-info">{{ bl.acronym }}</span>
-                        </a>
-                    {% endfor %}&nbsp;</div>
-                </h5>
-            </div>
+          {% endfor %}
         </div>
     </div>
 {% endblock %}
 
-{% block full %}
-    <div class="row">
-        <div class="list-group col-12">
-            {% for division in divisions %}
-                {% include "kpis/entries/department-list-item.html" with department=division %}
-            {% endfor %}
-        </div>
-    </div>
-{% endblock %}	
 
 

@@ -1,17 +1,13 @@
 from django import forms
-from django.forms import ValidationError
+from django.contrib.postgres.forms import SimpleArrayField
 from django.template.defaultfilters import linebreaksbr
 from django.urls import reverse_lazy
-from django.utils import timezone
-from django.utils.translation import ugettext as _
 
 from crispy_forms.bootstrap import StrictButton
 from crispy_forms.helper import FormHelper
 from crispy_forms.layout import HTML, Div, Field, Layout
 
-from .models import KPI, KPIEntry, KPICategory, Department, Beamline
-
-import calendar
+from .models import KPI, KPIEntry, KPICategory, Unit
 
 
 class BodyHelper(FormHelper):
@@ -30,11 +26,12 @@ class FooterHelper(FormHelper):
         self.form_show_errors = False
 
 
-class DepartmentForm(forms.ModelForm):
+class UnitForm(forms.ModelForm):
+    admin_roles = SimpleArrayField(forms.CharField())
 
     class Meta:
-        model = Department
-        fields = ['name', 'acronym', 'division']
+        model = Unit
+        fields = ['name', 'acronym', 'parent', 'admin_roles', 'acronyms', 'kind']
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -43,46 +40,18 @@ class DepartmentForm(forms.ModelForm):
         self.footer = FooterHelper(self)
         if self.instance.pk:
             self.body.title = u"{}".format(self.instance.name)
-            self.body.form_action = reverse_lazy('department-edit', kwargs={'pk': self.instance.pk})
+            self.body.form_action = reverse_lazy('unit-edit', kwargs={'pk': self.instance.pk})
         else:
-            self.body.title = u"New Department"
-            self.body.form_action = reverse_lazy('new-department')
+            self.body.title = u"New Unit"
+            self.body.form_action = reverse_lazy('new-unit')
         self.body.layout = Layout(
             Div(
                 Div('name', css_class="col-12"),
                 Div('acronym', css_class="col-6"),
-                Div('division', css_class="col-6"),
-                css_class="row"
-            ),
-        )
-        self.footer.layout = Layout(
-            StrictButton('Revert', type='reset', value='Reset', css_class="btn btn-secondary"),
-            StrictButton('Save', type='submit', name="submit", value='save', css_class='btn btn-primary'),
-        )
-
-
-class BeamlineForm(forms.ModelForm):
-
-    class Meta:
-        model = Beamline
-        fields = ['name', 'acronym', 'department']
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
-        self.body = BodyHelper(self)
-        self.footer = FooterHelper(self)
-        if self.instance.pk:
-            self.body.title = u"{}".format(self.instance.name)
-            self.body.form_action = reverse_lazy('beamline-edit', kwargs={'pk': self.instance.pk})
-        else:
-            self.body.title = u"New Beamline"
-            self.body.form_action = reverse_lazy('new-beamline')
-        self.body.layout = Layout(
-            Div(
-                Div('name', css_class="col-12"),
-                Div('acronym', css_class="col-6"),
-                Div('department', css_class="col-6"),
+                Div('kind', css_class="col-6"),
+                Div('parent', css_class="col-12"),
+                Div('admin_roles', css_class="col-12"),
+                Div('acronyms', css_class="col-12"),
                 css_class="row"
             ),
         )
@@ -96,7 +65,7 @@ class KPIForm(forms.ModelForm):
 
     class Meta:
         model = KPI
-        fields = ['name', 'description', 'category', 'kind', 'priority', 'department', 'beamline']
+        fields = ['name', 'description', 'category', 'kind', 'priority', 'units']
         widgets = {
             'description': forms.Textarea(attrs={"cols": 54, "rows": 4, "class": "form-control"}),
         }
@@ -122,8 +91,7 @@ class KPIForm(forms.ModelForm):
             ),
             Div(
                 Div('kind', css_class="col-12"),
-                Div('department', css_class="col-6"),
-                Div('beamline', css_class="col-6"),
+                Div(Field('units', css_class="select"), css_class="col-12"),
                 css_class="row"
             )
         )
@@ -133,51 +101,14 @@ class KPIForm(forms.ModelForm):
         )
 
 
-class BeamlineMonthForm(forms.ModelForm):
-    month = forms.ChoiceField(choices=[(i, calendar.month_name[i]) for i in range(1,13)], initial=timezone.now().month)
-    year = forms.IntegerField(initial=timezone.now().year)
-
-    class Meta:
-        model = KPIEntry
-        fields = ['beamline',]
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
-        self.body = BodyHelper(self)
-        self.footer = FooterHelper(self)
-
-        self.body.title = u"New Beamline Report"
-        self.body.form_action = reverse_lazy('new-month', kwargs={'pk': self.initial.get('beamline').pk})
-        self.body.layout = Layout(
-            Div(
-                Div(Field('beamline', readonly=True), css_class="col-12"),
-                Div(Field('year'), css_class="col-6"),
-                Div(Field('month'), css_class="col-6"),
-                css_class="row"
-            ),
-        )
-        self.footer.layout = Layout(
-            StrictButton('Revert', type='reset', value='Reset', css_class="btn btn-secondary"),
-            StrictButton('Save', type='submit', name="submit", value='save', css_class='btn btn-primary'),
-        )
-
-    def clean_month(self):
-        try:
-            month =int(self.cleaned_data['month'])
-        except:
-            raise ValidationError(_('Invalid value: %(month)s'), code='invalid', params={'month': self.cleaned_data['month']})
-        return month
-
-
 class KPIEntryForm(forms.ModelForm):
 
     class Meta:
         model = KPIEntry
-        fields = ['value', 'comments', 'beamline', 'kpi', 'month']
+        fields = ['value', 'comments', 'unit', 'kpi', 'month']
         widgets = {
             'comments': forms.Textarea(attrs={"rows": 8, "class": "form-control"}),
-            'beamline': forms.HiddenInput(),
+            'unit': forms.HiddenInput(),
             'kpi': forms.HiddenInput(),
             'month': forms.HiddenInput()
         }
@@ -198,7 +129,7 @@ class KPIEntryForm(forms.ModelForm):
         self.body.title = u"{}".format(kpi.name)
         self.body.layout = Layout(
             Div(
-                'beamline', 'kpi', 'month',
+                'unit', 'kpi', 'month',
                 HTML("<div class='jumbotron p-3 mb-2 col-12'>{}</div>".format(linebreaksbr(kpi.description))),
                 Div(Field('value', css_class="form-control"), css_class="col-3"),
                 Div('comments', css_class="col-12"),
