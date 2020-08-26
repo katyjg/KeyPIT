@@ -126,8 +126,12 @@ class UnitReport(UserRoleMixin, detail.DetailView):
         if entries.filter(kpi__category__isnull=True).exists():
             context['categories']['Other'] = entries.filter(kpi__category__isnull=True)
 
-        filters = {'month__year': year, 'unit': self.object}
-        context['years'] = stats.get_data_periods(period='year')
+        filters = {'unit': self.object}
+        context['years'] = stats.get_data_periods(period='year', **filters)
+        if timezone.localtime().year not in context['years']:
+            context['years'].append(timezone.localtime().year)
+
+        filters['month__year'] = year
         context['months'] = stats.get_data_periods(period='month', **filters)
         context['quarters'] = stats.get_data_periods(period='quarter', **filters)
         context['year'] = year

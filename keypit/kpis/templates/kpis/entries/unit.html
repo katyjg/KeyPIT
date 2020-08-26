@@ -35,17 +35,25 @@
         <div class="row">
             <div class="col-5">
                 <h5 class="my-0 p-2">
-                <span class="text-normal text-condensed text-muted">Year: </span>
-                <a href="{% url "unit-detail" object.pk %}" class="border-right pr-2 mx-1"><span class="px-0 badge badge-{% if year %}info{% else %}primary{% endif %}">&emsp;All&emsp;</span></a>
-                {% for yr in years %}
-                    <a href="{% if period != 'year' and period %}{% url "unit-year" object.pk yr period %}{% else %}{% url "unit-year" object.pk yr 'month' %}{% endif %}"><span class="badge badge-{% if yr == year %}primary{% else %}info{% endif %}">{{ yr }}</span></a>
-                {% endfor %}
+                    <span class="text-normal text-condensed text-muted float-left">Year: </span>
+                    <a href="{% url "unit-detail" object.pk %}" class="float-left border-right px-2 mx-1"><span class="px-0 badge badge-{% if year %}info{% else %}primary{% endif %}">&emsp;All&emsp;</span></a>
+                    <div class="dropright float-left">
+                      <span type="button" class="mx-1 px-2 badge badge-{% if year %}primary{% else %}info{% endif %} dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                          &nbsp;{{ year|default:"----" }}&nbsp;
+                      </span>
+                      <div class="dropdown-menu" aria-labelledby="dropdownMenuButton">
+                          {% for yr in years reversed %}
+                            <a class="dropdown-item" href="{% if period != 'year' and period %}{% url "unit-year" object.pk yr period %}{% else %}{% url "unit-year" object.pk yr 'month' %}{% endif %}">{{ yr }}</a>
+                          {% endfor %}
+                      </div>
+                    </div>
                 </h5>
+                <br/>
                 {% if year %}
                     <h5 class="my-0 pt-0 px-2 pb-2">
                         <span class="text-normal text-condensed text-muted">Data: </span>
                         <a href="{% url "unit-year" object.pk year 'month' %}">
-                            <span class="badge badge-{% if period == 'month' %}primary{% else %}info{% endif %}">Monthly</span>
+                            <span class="ml-1 badge badge-{% if period == 'month' %}primary{% else %}info{% endif %}">Monthly</span>
                         </a>
                         <a href="{% url "unit-year" object.pk year 'quarter' %}">
                             <span class="badge badge-{% if period == 'quarter' and not quarter %}primary{% else %}info{% endif %}">Quarterly</span>

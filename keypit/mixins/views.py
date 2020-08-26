@@ -1,5 +1,6 @@
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from django.http import JsonResponse
+from django.utils import timezone
 
 from keypit.kpis import stats
 
@@ -77,6 +78,8 @@ class ReportViewMixin(object):
         filters = self.get_filters()
 
         report_ctx['years'] = stats.get_data_periods(period='year', **filters)
+        if timezone.localtime().year not in report_ctx['years']:
+            report_ctx['years'].append(timezone.localtime().year)
 
         if year:
             filters.update({'month__year': year})
