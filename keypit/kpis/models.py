@@ -134,6 +134,23 @@ class KPI(models.Model):
         ordering = ['category__priority', 'priority', ]
 
 
+class KPIFamily(models.Model):
+    TYPE = Choices(
+        (0, 'RELATED', _('Related')),
+        (1, 'CUMULATIVE', _('Cumulative')),
+    )
+    name = models.CharField(max_length=250)
+    kpis = models.ManyToManyField(KPI)
+    kind = models.IntegerField(choices=TYPE, default=TYPE.RELATED)
+
+    def __str__(self):
+        return self.name
+
+    class Meta:
+        verbose_name = "KPI Family"
+        verbose_name_plural = "KPI Families"
+
+
 class KPIEntry(models.Model):
     kpi = models.ForeignKey(KPI, on_delete=models.CASCADE, related_name="entries")
     unit = models.ForeignKey(Unit, on_delete=models.CASCADE, related_name="entries")

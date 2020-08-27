@@ -1,16 +1,15 @@
-from django.db.models import Avg, Sum, Value, TextField, CharField, Func, F, ExpressionWrapper
-from django.db.models.functions import Concat, ExtractMonth, ExtractYear, Cast, Trunc
+from django.db.models import Avg, Sum, Value, TextField, Func
+from django.db.models.functions import Concat
 from django.template.defaultfilters import linebreaksbr, mark_safe
-from django.utils import timezone
 
 import calendar
 from copy import deepcopy
 from datetime import datetime
-from memoize import memoize
 
-from .models import KPIEntry, KPI
+from .models import KPIEntry, KPI, KPIFamily
 
 HOUR_SECONDS = 3600
+COLORS = ["#006eb6", "#41864A", "#990099", "#512D6D", "#F0AD4E"]
 
 
 def get_data_periods(period='year', **filters):
@@ -41,6 +40,7 @@ def unit_stats(period='month', year=None, **filters):
         time_format = period == 'month' and '%b' or '%Y'
 
         details = []
+        kpi_data = {}
         summary_data = [[''] + period_names + ['Total / Avg']]
         for cat in categories:
             content = []
@@ -90,14 +90,16 @@ def unit_stats(period='month', year=None, **filters):
                     summary_data += [[kpi.name] + [period_data.get(p, '-') for p in periods] + [total]]
 
                     if period_data:
+                        kpi_data[kpi.pk] = { period == 'year' and p or datetime.strftime(datetime(year, p, 1, 0, 0), '%b'): v for p, v in period_data.items() }
                         content += [{
                             'title': kpi.name,
                             'kind': 'columnchart',
                             'data': {
+                                'colors': COLORS,
                                 'x-label': period.title(),
                                 'data': [
-                                    { period.title(): period == 'year' and p or datetime.strftime(datetime(year, p, 1, 0, 0), '%b'), "Value": v }
-                                    for p, v in period_data.items()
+                                    { period.title(): p, "Value": v }
+                                    for p, v in kpi_data[kpi.pk].items()
                                 ],
                             },
                             'style': 'col-12 col-md-6 px-5'
@@ -105,6 +107,7 @@ def unit_stats(period='month', year=None, **filters):
                             'title': "Trend Line",
                             'kind': 'lineplot',
                             'data': {
+                                'colors': COLORS,
                                 'x': [period.title()] + kpi_period_xvalues,
                                 'y1': [['Value'] + period_trend],
                                 'x-scale': 'time',
@@ -135,6 +138,33 @@ def unit_stats(period='month', year=None, **filters):
                 }] + content
             })
 
+        family_content = []
+        for family in KPIFamily.objects.filter(kpis__pk__in=entries.values_list('kpi__pk', flat=True)).distinct():
+            family_kpis = family.kpis.filter(pk__in=kpi_data.keys())
+            periods = []
+            for pk in family_kpis.values_list('pk', flat=True):
+                for k in kpi_data[pk]:
+                    if k not in periods: periods.append(k)
+            if period == 'year':
+                periods = sorted(periods)
+            family_data = []
+            for per in periods:
+                family_data.append({ period.title(): per })
+            for f in family_data:
+                for kpi in family_kpis:
+                    f[kpi.name] = kpi_data[kpi.pk].get(f[period.title()], 0)
+            family_content.append({
+                'title': family.name,
+                'kind': 'columnchart',
+                'data': {
+                    'colors': COLORS,
+                    'x-label': period.title(),
+                    'data': family_data,
+                    'stack': family.kind == family.TYPE.CUMULATIVE and [[kpi.name for kpi in family_kpis]] or [],
+                },
+                'style': 'col-12 col-md-6 px-5'
+            })
+
         summary_table = [{
             'title': 'Summary',
             'style': 'row mb-4',
@@ -145,6 +175,8 @@ def unit_stats(period='month', year=None, **filters):
                 'style': 'col-12'
             }]
         }]
+        for plot in family_content:
+            summary_table[0]['content'].append(plot)
         stats = { 'details': summary_table + details }
     else:
         stats = { 'details': [{
