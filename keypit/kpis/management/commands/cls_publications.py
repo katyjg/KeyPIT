@@ -37,8 +37,7 @@ class Command(BaseCommand):
                                     publications.setdefault(d, []).append(c)
 
                     this_month = datetime.now().replace(day=1)
-                    first_month = publications and max(
-                        min(publications.keys()), datetime(datetime.now().year - 10, 1, 1)) or this_month
+                    first_month = publications and min(publications.keys()) or this_month
 
                     for dt, citations in publications.items():
                         citations = set(citations)
