@@ -17,14 +17,14 @@ class UserRoleMixin(LoginRequiredMixin):
         return ['employee']
 
     def is_admin(self):
-        return any(['<{}>'.format(r) in self.request.user.roles() for r in
+        return any(['{}'.format(r) in self.request.user.roles() for r in
                     self.admin_roles()]) or self.request.user.is_superuser
 
     def is_owner(self):
-        return any(['<{}>'.format(r) in self.request.user.roles() for r in self.owner_roles()]) or self.is_admin()
+        return any(['{}'.format(r) in self.request.user.roles() for r in self.owner_roles()]) or self.is_admin()
 
     def is_employee(self):
-        return any(['<{}>'.format(r) in self.request.user.roles() for r in self.employee_roles()]) or self.is_owner()
+        return any(['{}'.format(r) in self.request.user.roles() for r in self.employee_roles()]) or self.is_owner()
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
