@@ -9,7 +9,7 @@ from datetime import datetime
 from .models import KPIEntry, KPI, KPIFamily
 
 HOUR_SECONDS = 3600
-COLORS = ["#006eb6", "#41864A", "#990099", "#512D6D", "#F0AD4E"]
+COLORS = ["#006eb6", "#990099", "#512D6D", "#41864A", "#F0AD4E"]
 
 
 def get_data_periods(period='year', **filters):
@@ -67,53 +67,45 @@ def unit_stats(period='month', year=None, **filters):
                     # Add plots to the report
                     kpi_filters.update({'value__isnull': False})
                     kpi_periods = get_data_periods(period=period, **kpi_filters)
-                    kpi_period_xvalues = [
-                        datetime.strftime(
-                            datetime(period == 'month' and year or per, period == 'month' and per or 1, 1, 0, 0), '%c')
-                        for per in kpi_periods]
                     kpi_entries.filter(**kpi_filters).order_by(field)
                     total = '-'
+                    period_trend = {}
                     if kpi.kind == kpi.TYPE.SUM:
                         period_data = { p: kpi_entries.filter(**{field: p}).aggregate(sum=Sum('value'))['sum']
                                         for p in kpi_periods }
-                        period_trend = [sum(list(period_data.values())[:i + 1]) for i in range(len(kpi_periods))]
+                        period_trend = { p: sum(list(period_data.values())[:i + 1]) for i, p in enumerate(kpi_periods)}
                         if period_data:
                             total = sum(list(period_data.values()))
                     elif kpi.kind == kpi.TYPE.AVERAGE:
                         period_data = {p: kpi_entries.filter(**{field: p}).exclude(value__isnull=True).aggregate(avg=Avg('value'))['avg']
                                        for p in kpi_periods}
                         period_data = {k: round(v, 1) or v for k, v in period_data.items()}
-                        period_trend = list(period_data.values())
                         if period_data:
                             total = round(sum(period_data.values()) / len(period_data), 1)
-                    #table_row = [[kpi.name] + [period_data.get(p, '-') for p in kpi_periods] + [total]]
                     summary_data += [[kpi.name] + [period_data.get(p, '-') for p in periods] + [total]]
 
                     if period_data:
                         kpi_data[kpi.pk] = { period == 'year' and p or datetime.strftime(datetime(year, p, 1, 0, 0), '%b'): v for p, v in period_data.items() }
                         content += [{
+                            'style': 'col-lg-2 d-lg-block'
+                        }, {
                             'title': kpi.name,
                             'kind': 'columnchart',
                             'data': {
                                 'colors': COLORS,
                                 'x-label': period.title(),
-                                'data': [
+                                'data': period_trend and [
+                                    { period.title(): p, "Value": v, "Total": period_trend.get(p, 0) }
+                                    for p, v in kpi_data[kpi.pk].items()
+                                ] or [
                                     { period.title(): p, "Value": v }
                                     for p, v in kpi_data[kpi.pk].items()
                                 ],
+                                'line': period_trend and "Total" or "",
                             },
-                            'style': 'col-12 col-md-6 px-5'
+                            'style': 'col-12 col-lg-8 px-5'
                         }, {
-                            'title': "Trend Line",
-                            'kind': 'lineplot',
-                            'data': {
-                                'colors': COLORS,
-                                'x': [period.title()] + kpi_period_xvalues,
-                                'y1': [['Value'] + period_trend],
-                                'x-scale': 'time',
-                                'time-format': time_format
-                            },
-                            'style': 'col-12 col-md-6 px-5'
+                            'style': 'col-lg-2 d-lg-block'
                         }]
                     else:
                         content += [{
@@ -141,29 +133,32 @@ def unit_stats(period='month', year=None, **filters):
         family_content = []
         for family in KPIFamily.objects.filter(kpis__pk__in=entries.values_list('kpi__pk', flat=True)).distinct():
             family_kpis = family.kpis.filter(pk__in=kpi_data.keys())
-            periods = []
-            for pk in family_kpis.values_list('pk', flat=True):
-                for k in kpi_data[pk]:
-                    if k not in periods: periods.append(k)
-            if period == 'year':
-                periods = sorted(periods)
-            family_data = []
-            for per in periods:
-                family_data.append({ period.title(): per })
-            for f in family_data:
-                for kpi in family_kpis:
-                    f[kpi.name] = kpi_data[kpi.pk].get(f[period.title()], 0)
-            family_content.append({
-                'title': family.name,
-                'kind': 'columnchart',
-                'data': {
-                    'colors': COLORS,
-                    'x-label': period.title(),
-                    'data': family_data,
-                    'stack': family.kind == family.TYPE.CUMULATIVE and [[kpi.name for kpi in family_kpis]] or [],
-                },
-                'style': 'col-12 col-md-6 px-5'
-            })
+            if family_kpis.count() > 1:
+                periods = []
+                for pk in family_kpis.values_list('pk', flat=True):
+                    for k in kpi_data[pk]:
+                        if k not in periods: periods.append(k)
+                if period == 'year':
+                    periods = sorted(periods)
+                elif period == 'month':
+                    periods = sorted(periods, key=lambda x: datetime.strptime(x, '%b').month)
+                family_data = []
+                for per in periods:
+                    family_data.append({ period.title(): per })
+                for f in family_data:
+                    for kpi in family_kpis:
+                        f[kpi.name] = kpi_data[kpi.pk].get(f[period.title()], 0)
+                family_content.append({
+                    'title': family.name,
+                    'kind': 'columnchart',
+                    'data': {
+                        'colors': COLORS,
+                        'x-label': period.title(),
+                        'data': family_data,
+                        'stack': family.kind == family.TYPE.CUMULATIVE and [[kpi.name for kpi in family_kpis]] or [],
+                    },
+                    'style': 'col-12 col-md-6 px-5'
+                })
 
         summary_table = [{
             'title': 'Summary',

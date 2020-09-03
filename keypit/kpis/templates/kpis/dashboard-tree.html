@@ -1,6 +1,39 @@
 {% extends "base.html" %}
 {% load icons %}
 {% load msgs %}
+{% load settings %}
+{% load static %}
+
+{% block extra_css %}
+    <style>
+
+    .node circle {
+      stroke: #17a2b8;
+      stroke-width: 3px;
+    }
+    .node circle.active {
+        stroke: #2e1725;
+        fill: #512d6d !important;
+    }
+
+    .node text {
+      font: 12px sans-serif;
+    }
+
+    .link {
+      fill: none;
+      stroke: #ccc;
+      stroke-width: 2px;
+    }
+
+    </style>
+{% endblock %}
+
+{% block pre_js %}
+    {{ block.super }}
+    <script type="text/javascript" src="{% static "js/d3/d3.v5.min.js" %}"></script>
+    <script type="text/javascript" src="{% static 'js/keypit-tree.min.js' %}"></script>
+{% endblock %}
 
 {% block page_heading %}
     <h3 class="text-condensed">Welcome, <span class="text-muted"><strong>{{ user.username|upper }}</strong></span>! </h3>
@@ -33,5 +66,22 @@
           {% endfor %}
         </div>
     </div>
+{% endblock %}
+
+{% block full %}
+    <div class="row">
+        <div class="col-12 col-md-9">
+            <div id="tree-dashboard" data-target="#node-detail" data-url="{% url 'unit-list' %}"></div>
+        </div>
+        <div class="col-12 d-none d-md-block col-md-3 pl-3" style="border-left: 1px solid #ddd;">
+            <div id="node-detail"></div>
+        </div>
+    </div>
+
+    <script>
+        var report = {{ report | safe }};
+        dendrogram('#tree-dashboard', report);
+    </script>
+
 {% endblock %}
 

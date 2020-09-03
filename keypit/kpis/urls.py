@@ -8,6 +8,7 @@ urlpatterns = [
 
     path('units/', views.UnitList.as_view(), name='unit-list'),
     path('units/<int:pk>/', views.UnitDetail.as_view(), name='unit-detail'),
+    path('units/<int:pk>/widget/', views.UnitDetail.as_view(template_name='kpis/entries/unit-widget.html'), name='unit-widget'),
     path('units/<int:pk>/<int:year>/<str:period>/', views.UnitDetail.as_view(), name='unit-year'),
     path('units/<int:pk>/<int:year>/month/<int:month>/', views.UnitReport.as_view(), name='unit-report'),
     path('units/new/', views.UnitCreate.as_view(), name='new-unit'),

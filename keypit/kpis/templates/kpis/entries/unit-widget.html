@@ -1,0 +1,38 @@
+<h3 class="text-condensed">
+    <a href="{% url 'unit-detail' object.pk %}">
+        {{ object.acronym|upper }} {{ object.kind.name }}
+    </a>
+</h3>
+<span class="text-muted">
+    {{ object.name }}
+</span>
+<hr/>
+<h6 class="text-bold">Base KPIs</h6>
+<div class="text-condensed">
+{% for kpi in object.kpi_set.all %}
+    <span class="text-condensed text-sm">{{ kpi.priority_display }}. {{ kpi.name }}</span><br/>
+{% empty %}
+    <span class="text-condensed text-sm">None</span>
+{% endfor %}
+</div>
+{% if object.reporter %}
+    <h6 class="text-bold mt-3">Inherited KPIs</h6>
+    <div class="text-condensed">
+    {% for kpi in object.inherited.all %}
+        <span class="text-condensed text-sm">{{ kpi.priority_display }}. {{ kpi.name }}</span><br/>
+    {% empty %}
+        <span class="text-condensed text-sm">None</span>
+    {% endfor %}
+    </div>
+{% else %}
+    <h6 class="text-bold mt-3">Reporting Sub-units</h6>
+    <div class="text-condensed">
+    {% for unit in object.reporting_subunits %}
+        <span class="text-condensed text-sm">{{ unit.acronym }}</span><br/>
+    {% empty %}
+        <span class="text-condensed text-sm">None</span>
+    {% endfor %}
+    </div>
+{% endif %}
+
+</div>

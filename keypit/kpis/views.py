@@ -16,6 +16,10 @@ def format_description(val, record):
     return linebreaksbr(val)
 
 
+def format_reporters(val, record):
+    return ' '.join(['<span class="badge badge-info">{}</span>'.format(u.acronym) for u in record.units.all()])
+
+
 class LandingPage(UserRoleMixin, View):
     """
     Dispatch user to an appropriate view based on their roles.
@@ -38,7 +42,7 @@ class Dashboard(UserRoleMixin, detail.DetailView):
     This is the "Dashboard" view.
     """
     model = models.Manager
-    template_name = "kpis/dashboard.html"
+    template_name = "kpis/dashboard-tree.html"
     slug_field = 'username'
     slug_url_kwarg = 'username'
 
@@ -54,6 +58,12 @@ class Dashboard(UserRoleMixin, detail.DetailView):
             kind.name: models.Unit.tree.filter(kind=kind) for kind in models.UnitType.objects.all()
         }
         context['units'] = {k: v for k, v in units.items() if v}
+        context['report'] = {
+            "depth": 3 + max([max([d.depth for d in u.descendants()] + [0]) for u in models.Unit.tree.filter(parent__isnull=True)]),
+            "name": "KeyPIT",
+            "children": [ unit.dendrogram() for unit in models.Unit.tree.filter(parent__isnull=True) ]
+        }
+
         return context
 
 
@@ -109,8 +119,7 @@ class UnitReport(UserRoleMixin, detail.DetailView):
 
         entry = models.KPIEntry.objects.filter(
             month__year=year, month__month=month, unit=self.object, kpi__pk=OuterRef('pk'))
-        indicators = models.KPI.objects.filter(
-            units__pk__in=[self.object.pk] + list(self.object.ancestors().values_list('pk', flat=True))).annotate(
+        indicators = self.object.indicators().annotate(
             entry=Subquery(entry.values('pk')[:1]),
             value=Subquery(entry.values('value')[:1]),
             comments=Subquery(entry.values('comments')[:1])
@@ -170,8 +179,8 @@ class UnitEdit(OwnerRequiredMixin, SuccessMessageMixin, AsyncFormMixin, edit.Upd
 class KPIList(UserRoleMixin, ListViewMixin, ItemListView):
     model = models.KPI
     list_filters = ['category', 'kind']
-    list_columns = ['name', 'category', 'description', 'kind']
-    list_transforms = {'description': format_description}
+    list_columns = ['name', 'category', 'description', 'kind', 'base_units']
+    list_transforms = {'description': format_description, 'base_units': format_reporters}
     list_search = ['name', 'description']
     link_url = 'kpi-detail'
     add_url = 'new-kpi'
@@ -188,6 +197,14 @@ class KPIDetail(UserRoleMixin, ReportViewMixin, detail.DetailView):
     def get_filters(self):
         return {'kpi': self.object}
 
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        pks = [u.pk for u in self.object.reporting_units()]
+        units = {
+            kind.name: models.Unit.tree.filter(pk__in=pks, kind=kind) for kind in models.UnitType.objects.all()
+        }
+        context['units'] = {k: v for k, v in units.items() if v}
+        return context
 
 class KPICreate(AdminRequiredMixin, SuccessMessageMixin, AsyncFormMixin, edit.CreateView):
     form_class = forms.KPIForm

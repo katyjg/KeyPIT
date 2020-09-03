@@ -84,6 +84,22 @@ class Unit(TreeModel):
     def reporter(self):
         return self.kind.reporter
 
+    def reporting_subunits(self):
+        return [u for u in self.descendants() if u.reporter()]
+
+    def indicators(self):
+        return KPI.objects.filter(units__pk__in=[self.pk] + list(self.ancestors().values_list('pk', flat=True)))
+
+    def inherited(self):
+        return self.indicators().exclude(units__pk=self.pk)
+
+    def dendrogram(self):
+        return {
+            "name": self.acronym,
+            "pk": self.pk,
+            "children": [ child.dendrogram() for child in self.children.all() ]
+         }
+
 
 class KPICategory(models.Model):
     name = models.CharField(max_length=250)
@@ -127,7 +143,8 @@ class KPI(models.Model):
         return "{}{}".format(self.category.priority_display(), string.ascii_lowercase[letter])
 
     def reporting_units(self):
-        return set([i for subunits in [u.descendants() for u in self.units.all()] for i in subunits])
+        units =  set(list(self.units.all()) + [i for sub in [u.descendants() for u in self.units.all()] for i in sub])
+        return [u for u in units if u.kind.reporter]
 
     class Meta:
         verbose_name = "Key Performance Indicator"
