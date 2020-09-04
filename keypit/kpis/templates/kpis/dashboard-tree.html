@@ -5,28 +5,7 @@
 {% load static %}
 
 {% block extra_css %}
-    <style>
-
-    .node circle {
-      stroke: #17a2b8;
-      stroke-width: 3px;
-    }
-    .node circle.active {
-        stroke: #2e1725;
-        fill: #512d6d !important;
-    }
-
-    .node text {
-      font: 12px sans-serif;
-    }
-
-    .link {
-      fill: none;
-      stroke: #ccc;
-      stroke-width: 2px;
-    }
-
-    </style>
+    <link rel="stylesheet" href="{% static "css/keypit-tree.css" %}">
 {% endblock %}
 
 {% block pre_js %}
