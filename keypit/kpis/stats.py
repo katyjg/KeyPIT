@@ -76,6 +76,7 @@ def unit_stats(period='month', year=None, **filters):
                         period_trend = { p: sum(list(period_data.values())[:i + 1]) for i, p in enumerate(kpi_periods)}
                         if period_data:
                             total = sum(list(period_data.values()))
+
                     elif kpi.kind == kpi.TYPE.AVERAGE:
                         period_data = {p: kpi_entries.filter(**{field: p}).exclude(value__isnull=True).aggregate(avg=Avg('value'))['avg']
                                        for p in kpi_periods}
@@ -95,7 +96,8 @@ def unit_stats(period='month', year=None, **filters):
                                 'colors': COLORS,
                                 'x-label': period.title(),
                                 'data': period_trend and [
-                                    { period.title(): p, "Value": v, "Total": period_trend.get(p, 0) }
+                                    { period.title(): p, "Value": v,
+                                      "Total": period_trend.get(period_names.index(p)+1, 0) }
                                     for p, v in kpi_data[kpi.pk].items()
                                 ] or [
                                     { period.title(): p, "Value": v }
