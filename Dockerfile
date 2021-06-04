@@ -7,6 +7,8 @@ COPY requirements.txt /
 RUN apk add --no-cache --virtual .build-deps bash gcc linux-headers musl-dev postgresql-dev libpq libffi-dev \
     apache2-mod-wsgi python3-dev libxml2-dev libxslt-dev
 
+RUN apk add cmd:pip3
+
 RUN set -ex && /usr/bin/pip3 install --upgrade pip && /usr/bin/pip3 install --no-cache-dir -r /requirements.txt
 
 EXPOSE 80

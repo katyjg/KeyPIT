@@ -86,7 +86,10 @@ def unit_stats(period='month', year=None, **filters):
                     summary_data += [[kpi.name] + [period_data.get(p, '-') for p in periods] + [total]]
 
                     if period_data:
-                        kpi_data[kpi.pk] = { period == 'year' and p or datetime.strftime(datetime(year, p, 1, 0, 0), '%b'): v for p, v in period_data.items() }
+                        kpi_data[kpi.pk] = {
+                            period == 'year' and p or (period == 'month' and datetime.strftime(
+                                datetime(year, p, 1, 0, 0), '%b')) or 'Q{}'.format(p): v for p, v in
+                            period_data.items()}
                         content += [{
                             'style': 'col-lg-2 d-lg-block'
                         }, {
@@ -97,7 +100,7 @@ def unit_stats(period='month', year=None, **filters):
                                 'x-label': period.title(),
                                 'data': period_trend and [
                                     { period.title(): p, "Value": v,
-                                      "Total": period_trend.get(period_names.index(p)+1, 0) }
+                                      "Total": period_trend.get(period != 'year' and period_names.index(p)+1 or p, 0) }
                                     for p, v in kpi_data[kpi.pk].items()
                                 ] or [
                                     { period.title(): p, "Value": v }
