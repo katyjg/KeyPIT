@@ -59,7 +59,7 @@ class Dashboard(UserRoleMixin, detail.DetailView):
         }
         context['units'] = {k: v for k, v in units.items() if v}
         context['report'] = {
-            "depth": 3 + max([max([d.depth for d in u.descendants()] + [0]) for u in models.Unit.tree.filter(parent__isnull=True)]),
+            "depth": 3 + max([max([d.depth() for d in u.descendants()] + [0]) for u in models.Unit.tree.filter(parent__isnull=True)]),
             "name": "KeyPIT",
             "children": [ unit.dendrogram() for unit in models.Unit.tree.filter(parent__isnull=True) ]
         }
@@ -117,15 +117,23 @@ class UnitReport(UserRoleMixin, detail.DetailView):
         year = self.kwargs.pop('year')
         month = self.kwargs.pop('month')
 
-        entries = self.object.entries.filter(month__year=year, month__month=month)
         entry = models.KPIEntry.objects.filter(
             month__year=year, month__month=month, unit=self.object, kpi__pk=OuterRef('pk'))
-        pks = [e.kpi.pk for e in entries] + [kpi.pk for kpi in self.object.indicators()]
-        indicators = models.KPI.objects.filter(pk__in=pks).annotate(
+        indicators = self.object.indicators().annotate(
             entry=Subquery(entry.values('pk')[:1]),
             value=Subquery(entry.values('value')[:1]),
             comments=Subquery(entry.values('comments')[:1])
         )
+
+        entries = self.object.entries.filter(
+            month__year=year, month__month=month).order_by('kpi__category__priority', 'kpi__priority')
+        categories = models.KPICategory.objects.filter(
+            pk__in=entries.values_list('kpi__category__id', flat=True).distinct())
+        context['categories'] = {
+            cat: entries.filter(kpi__category=cat) for cat in categories
+        }
+        if entries.filter(kpi__category__isnull=True).exists():
+            context['categories']['Other'] = entries.filter(kpi__category__isnull=True)
 
         filters = {'unit': self.object}
         context['years'] = stats.get_data_periods(period='year', **filters)

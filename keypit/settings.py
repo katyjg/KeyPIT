@@ -44,6 +44,7 @@ INSTALLED_APPS = [
     'debug_toolbar',
     'itemlist',
     'crispy_forms',
+    'crispy_bootstrap4',
     'keypit.kpis',
 ]
 
@@ -113,6 +114,8 @@ AUTHENTICATION_BACKENDS = [
 ]
 
 AUTH_USER_MODEL = 'kpis.Manager'
+DEFAULT_AUTO_FIELD = 'django.db.models.AutoField'
+CRISPY_TEMPLATE_PACK = 'bootstrap4'
 
 # Internationalization
 # https://docs.djangoproject.com/en/3.0/topics/i18n/
@@ -157,7 +160,7 @@ MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'local/media')
 
 CAS_ENABLED = True
-CAS_SERVER_URL = "https://cas-test.clsi.ca/"
+CAS_SERVER_URL = "https://cas-dev.clsi.ca/"
 CAS_SERVICE_DESCRIPTION = "KeyPIT"
 CAS_LOGOUT_COMPLETELY = True
 CAS_CREATE_USER = True

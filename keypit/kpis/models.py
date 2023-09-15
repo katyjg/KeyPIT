@@ -3,7 +3,7 @@ from django.conf import settings
 from django.contrib.auth.models import AbstractUser
 from django.contrib.postgres.fields import ArrayField
 from django.dispatch import receiver
-from django.utils.translation import ugettext as _
+from django.utils.translation import gettext as _
 
 from django_cas_ng.signals import cas_user_authenticated
 
@@ -88,7 +88,7 @@ class Unit(TreeModel):
         return [u for u in self.descendants() if u.reporter()]
 
     def indicators(self):
-        return KPI.objects.filter(units__pk__in=[self.pk] + list(self.ancestors().values_list('pk', flat=True)))
+        return KPI.objects.filter(units__pk__in=[self.pk] + list([a.pk for a in self.ancestors()]))
 
     def inherited(self):
         return self.indicators().exclude(units__pk=self.pk)
@@ -99,6 +99,27 @@ class Unit(TreeModel):
             "pk": self.pk,
             "children": [ child.dendrogram() for child in self.children.all() ]
          }
+
+    def ancestors(self):
+        parents = []
+        parent = self.parent
+        if parent:
+            while parent.parent:
+                parents.append(parent)
+                parent = parent.parent
+        return parents
+
+    def descendants(self):
+        children = list(self.children.all())
+        descendants = [i for sl in [child.children.all() for child in children] for i in sl]
+        while any(descendants):
+            for descendant in descendants:
+                children.append(descendant)
+            descendants = [i for sl in [child.children.all() for child in descendants] for i in sl]
+        return children
+
+    def depth(self):
+        return len(self.ancestors())
 
 
 class KPICategory(models.Model):
