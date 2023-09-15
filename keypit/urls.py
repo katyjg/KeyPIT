@@ -14,7 +14,7 @@ Including another URLconf
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
 from django.conf import settings
-from django.conf.urls import include, url
+from django.urls import include, re_path
 from django.conf.urls.static import static
 from django.contrib import admin
 from django.contrib.auth.decorators import login_required
@@ -25,7 +25,7 @@ from django.urls import path
 from keypit.kpis.views import LandingPage
 
 urlpatterns = [
-    url(r'^$', login_required(LandingPage.as_view()), {}, 'landing'),
+    re_path(r'^$', login_required(LandingPage.as_view()), {}, 'landing'),
     path('admin/', admin.site.urls),
     path('keypit/',  include('keypit.kpis.urls')),
 ]
